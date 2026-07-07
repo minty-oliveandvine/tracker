@@ -1,8 +1,8 @@
 # Client Tracker — Frontend (Vercel)
 
-Static frontend for the Client Tracker. This is **frontend only** — a single
-`public/index.html` that talks to the Minty backend API (`tracker_app.py`) over
-HTTP.
+Static frontend for the Client Tracker. This is **frontend only** —
+`public/index.html` (markup + styles) plus `public/app.js` (logic) that talk to
+the Minty backend API (`tracker_app.py`) over HTTP.
 
 - **Backend / API** lives in the Minty repo (`tools/client_tracker/tracker_app.py`).
   It owns the database connection, the derived fields, the shared-password gate,
@@ -21,15 +21,20 @@ HTTP.
 
 ## Configuration
 
-There is **no server-side secret** in this frontend, so it needs no Vercel
-environment variables of its own. The only thing it needs to know is **where the
-backend is**. Set it one of two ways:
+The only thing this frontend needs to know is **where the backend is** (it's
+hosted on Render). The URL is **not** hardcoded — set it as a Vercel
+Environment Variable:
 
-- **Edit `public/index.html`**: set `DEFAULT_API_BASE` to the backend's public
-  URL (no trailing slash), e.g. `https://tracker.yourdomain.com`.
-- **Or per-visit**: open the deployed page with `?api=` once —
-  `https://your-frontend.vercel.app/?api=https://tracker.yourdomain.com` — and it
-  is remembered in the browser's localStorage.
+- In Vercel: **Project → Settings → Environment Variables**, add
+  `API_BASE` = your Render backend URL (no trailing slash), e.g.
+  `https://client-tracker.onrender.com`. Redeploy so it takes effect.
+- The static page can't read a Vercel env var directly, so a tiny serverless
+  function [`api/config.js`](api/config.js) reads `process.env.API_BASE` and
+  serves it at `/api/config`. `public/app.js` fetches that on load.
+- **Per-visit override**: open the deployed page with `?api=` once —
+  `https://your-frontend.vercel.app/?api=https://client-tracker.onrender.com` —
+  and it is remembered in the browser's localStorage (takes priority over the
+  env var).
 
 The shared password is entered by the user in the browser (prompt on first load)
 and kept in `sessionStorage` for the session — never stored in the repo or in

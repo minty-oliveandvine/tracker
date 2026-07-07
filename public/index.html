@@ -3,172 +3,337 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
 <title>Client Tracker</title>
 <style>
-  body { font-family: system-ui, -apple-system, sans-serif; margin: 32px; color: #1a1a1a; }
-  h1 { font-size: 20px; }
-  table { border-collapse: collapse; width: 100%; }
-  th, td { border: 1px solid #ddd; padding: 8px 10px; text-align: left; }
-  th { background: #f4f4f5; font-weight: 600; }
-  tr:nth-child(even) td { background: #fafafa; }
-  input[type=date] { font: inherit; padding: 3px; }
-  .saved { color: #16a34a; font-size: 12px; visibility: hidden; }
-  .saved.show { visibility: visible; }
-  td.derived { color: #374151; font-variant-numeric: tabular-nums; }
-  .none { color: #9ca3af; }
-  .yes { color: #16a34a; font-weight: 600; }
-  .no { color: #b91c1c; font-weight: 600; }
-  #status { color: #6b7280; font-size: 13px; margin-bottom: 12px; }
-  #error { color: #b91c1c; font-size: 13px; margin-bottom: 12px; white-space: pre-wrap; }
-  .topbar { display: flex; gap: 12px; align-items: center; margin-bottom: 8px; }
-  button { font: inherit; padding: 4px 12px; cursor: pointer; }
+  :root {
+    --bg: #ffffff;
+    --fg: #171717;
+    --fg-muted: #666666;
+    --fg-subtle: #8f8f8f;
+    --border: #ebebeb;
+    --border-strong: #e0e0e0;
+    --surface: #fafafa;
+    --surface-hover: #f5f5f5;
+    --accent: #171717;
+    --accent-fg: #ffffff;
+    --green: #0070f3;
+    --green-bg: #e8f0fe;
+    --success: #0f7b2e;
+    --success-bg: #e6f4ea;
+    --danger: #c11574;
+    --danger-fg: #b91c1c;
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 1px 3px rgba(0,0,0,.04);
+    --radius: 10px;
+    --font: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+            Roboto, Helvetica, Arial, sans-serif;
+    --mono: "Geist Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo,
+            Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0a0a0a;
+      --fg: #ededed;
+      --fg-muted: #a1a1a1;
+      --fg-subtle: #7d7d7d;
+      --border: #1f1f1f;
+      --border-strong: #2e2e2e;
+      --surface: #141414;
+      --surface-hover: #1a1a1a;
+      --accent: #ededed;
+      --accent-fg: #0a0a0a;
+      --green: #3291ff;
+      --green-bg: #10233f;
+      --success: #5ad07f;
+      --success-bg: #10251a;
+      --danger: #ff6ab8;
+      --danger-fg: #f87171;
+      --shadow: 0 1px 2px rgba(0,0,0,.4);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--fg);
+    margin: 0;
+    padding: 40px 24px 80px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 6px;
+  }
+  h1 {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .logo {
+    width: 26px; height: 26px;
+    border-radius: 7px;
+    background: var(--accent);
+    color: var(--accent-fg);
+    display: grid; place-items: center;
+    font-size: 13px; font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+
+  #status {
+    color: var(--fg-muted);
+    font-size: 13px;
+    margin: 0 0 20px;
+    min-height: 18px;
+  }
+
+  .toolbar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .search {
+    position: relative;
+    flex: 1;
+    max-width: 320px;
+  }
+  .search svg {
+    position: absolute;
+    left: 11px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--fg-subtle);
+    pointer-events: none;
+  }
+  input[type=search] {
+    width: 100%;
+    font: inherit;
+    font-size: 14px;
+    color: var(--fg);
+    background: var(--bg);
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    padding: 8px 12px 8px 34px;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  input[type=search]:focus {
+    border-color: var(--fg-subtle);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--fg-subtle) 20%, transparent);
+  }
+  .spacer { flex: 1; }
+
+  button {
+    font: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1px solid var(--border-strong);
+    background: var(--bg);
+    color: var(--fg);
+    transition: background .15s, border-color .15s;
+    white-space: nowrap;
+  }
+  button:hover { background: var(--surface-hover); }
+  button:active { transform: translateY(0.5px); }
+  button.primary {
+    background: var(--accent);
+    color: var(--accent-fg);
+    border-color: var(--accent);
+  }
+  button.primary:hover { opacity: .88; background: var(--accent); }
+
+  .card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    background: var(--bg);
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 14px;
+  }
+  thead th {
+    text-align: left;
+    font-weight: 500;
+    color: var(--fg-muted);
+    font-size: 12px;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    padding: 12px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  tbody td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr { transition: background .1s; }
+  tbody tr:hover td { background: var(--surface); }
+  td.name { font-weight: 500; }
+  td.derived {
+    color: var(--fg-muted);
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 13px;
+  }
+  .none { color: var(--fg-subtle); }
+  .save-cell { text-align: right; width: 70px; }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 3px 9px;
+    border-radius: 999px;
+    line-height: 1.4;
+  }
+  .badge::before {
+    content: "";
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  .badge-yes { color: var(--success); background: var(--success-bg); }
+  .badge-no  { color: var(--fg-subtle); background: var(--surface); }
+
+  input[type=date] {
+    font: inherit;
+    font-size: 13px;
+    font-family: var(--mono);
+    color: var(--fg);
+    background: var(--bg);
+    border: 1px solid var(--border-strong);
+    border-radius: 7px;
+    padding: 5px 8px;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  input[type=date]:focus {
+    border-color: var(--fg-subtle);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--fg-subtle) 18%, transparent);
+  }
+  input[type=date]::-webkit-calendar-picker-indicator {
+    opacity: .55; cursor: pointer;
+  }
+
+  .saved {
+    color: var(--success);
+    font-size: 12px;
+    font-weight: 500;
+    opacity: 0;
+    transition: opacity .2s;
+  }
+  .saved.show { opacity: 1; }
+
+  #error {
+    color: var(--danger-fg);
+    background: color-mix(in srgb, var(--danger-fg) 8%, var(--bg));
+    border: 1px solid color-mix(in srgb, var(--danger-fg) 25%, transparent);
+    border-radius: 8px;
+    font-size: 13px;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+    white-space: pre-wrap;
+  }
+
+  #empty {
+    padding: 40px 16px;
+    text-align: center;
+    color: var(--fg-subtle);
+    font-size: 14px;
+  }
+
+  /* loading skeleton */
+  #loading { padding: 8px 0; }
+  .skel-row {
+    display: flex; gap: 16px; padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .skel {
+    height: 14px; border-radius: 6px;
+    background: linear-gradient(90deg,
+      var(--surface) 25%, var(--surface-hover) 50%, var(--surface) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.3s ease-in-out infinite;
+  }
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  @media (max-width: 640px) {
+    body { padding: 24px 14px 60px; }
+    thead th, tbody td { padding: 10px 12px; }
+    .search { max-width: none; }
+  }
 </style>
 </head>
 <body>
-  <h1>Client Tracker</h1>
-  <div class="topbar">
-    <button id="signout" hidden>Sign out</button>
+  <div class="wrap">
+    <header>
+      <h1><span class="logo">CT</span> Client Tracker</h1>
+    </header>
+    <p id="status">Loading…</p>
+
+    <div id="error" hidden></div>
+
+    <div class="toolbar" id="toolbar" hidden>
+      <label class="search">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="11" cy="11" r="7"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="search" id="search" placeholder="Search clients…"
+               autocomplete="off" spellcheck="false">
+      </label>
+      <div class="spacer"></div>
+      <button id="refresh">Refresh</button>
+    </div>
+
+    <div class="card">
+      <div id="loading" hidden>
+        <div class="skel-row"><div class="skel" style="width:22%"></div><div class="skel" style="width:16%"></div><div class="skel" style="width:18%"></div><div class="skel" style="width:20%"></div></div>
+        <div class="skel-row"><div class="skel" style="width:26%"></div><div class="skel" style="width:14%"></div><div class="skel" style="width:16%"></div><div class="skel" style="width:18%"></div></div>
+        <div class="skel-row"><div class="skel" style="width:20%"></div><div class="skel" style="width:18%"></div><div class="skel" style="width:14%"></div><div class="skel" style="width:22%"></div></div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Client</th>
+            <th>Bill activated?</th>
+            <th>Client input date until</th>
+            <th>OV published &amp; checked until</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div id="empty" hidden></div>
+    </div>
   </div>
-  <div id="status">Loading…</div>
-  <div id="error"></div>
-  <table>
-    <thead>
-      <tr>
-        <th>Client</th>
-        <th>Bill activated?</th>
-        <th>Client input date until</th>
-        <th>OV published and checked until</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody id="rows"></tbody>
-  </table>
 
-<script>
-// ---------------------------------------------------------------------------
-// Where the Minty backend (this project's tracker_app.py) is reachable from
-// the public internet. FILL THIS IN once you know the URL (e.g. the Cloudflare
-// tunnel hostname, or wherever Minty is hosted). No trailing slash.
-//
-// You can override it without editing this file by appending ?api=... to the
-// page URL, e.g.  https://your-frontend.vercel.app/?api=https://minty.example
-// (the value is remembered in localStorage after the first use).
-// ---------------------------------------------------------------------------
-const DEFAULT_API_BASE = "https://REPLACE-WITH-MINTY-BACKEND-URL";
-
-function resolveApiBase() {
-  const fromQuery = new URLSearchParams(location.search).get("api");
-  if (fromQuery) {
-    localStorage.setItem("tracker_api_base", fromQuery.replace(/\/+$/, ""));
-  }
-  return (localStorage.getItem("tracker_api_base") || DEFAULT_API_BASE)
-    .replace(/\/+$/, "");
-}
-const API_BASE = resolveApiBase();
-
-// ---- shared-password auth -------------------------------------------------
-// The backend uses HTTP Basic Auth (user "team" by default + shared password).
-// We collect it once, keep it for the session, and send it on every request.
-const AUTH_USER = "team"; // matches TRACKER_USER default on the backend
-let authHeader = sessionStorage.getItem("tracker_auth") || "";
-
-function ensureAuth() {
-  if (authHeader) return true;
-  const pw = prompt("Enter the Client Tracker shared password:");
-  if (pw === null) return false; // cancelled
-  authHeader = "Basic " + btoa(AUTH_USER + ":" + pw);
-  sessionStorage.setItem("tracker_auth", authHeader);
-  return true;
-}
-
-function signOut() {
-  authHeader = "";
-  sessionStorage.removeItem("tracker_auth");
-  location.reload();
-}
-document.getElementById("signout").addEventListener("click", signOut);
-
-async function api(path, opts = {}) {
-  if (!ensureAuth()) throw new Error("Password required.");
-  const res = await fetch(API_BASE + path, {
-    ...opts,
-    headers: { ...(opts.headers || {}), Authorization: authHeader },
-  });
-  if (res.status === 401) {
-    // Wrong password — clear it so the next attempt re-prompts.
-    signOut();
-    throw new Error("Wrong password.");
-  }
-  if (!res.ok) throw new Error("Request failed (" + res.status + ").");
-  return res;
-}
-
-// ---- rendering ------------------------------------------------------------
-async function load() {
-  const errorEl = document.getElementById("error");
-  errorEl.textContent = "";
-  if (API_BASE.includes("REPLACE-WITH")) {
-    errorEl.textContent =
-      "Backend URL is not configured. Set DEFAULT_API_BASE in index.html, " +
-      "or open this page with ?api=https://your-backend-url";
-    document.getElementById("status").textContent = "";
-    return;
-  }
-  let rows;
-  try {
-    const res = await api("/api/rows");
-    rows = await res.json();
-  } catch (e) {
-    document.getElementById("status").textContent = "";
-    errorEl.textContent = "Could not load: " + e.message;
-    return;
-  }
-  document.getElementById("signout").hidden = false;
-  const tbody = document.getElementById("rows");
-  tbody.innerHTML = "";
-  for (const r of rows) {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${escapeHtml(r.name)}</td>
-      <td class="derived">${r.bill_activated
-          ? '<span class="yes">Yes</span>' : '<span class="no">No</span>'}</td>
-      <td class="derived">${r.client_input_until || '<span class="none">—</span>'}</td>
-      <td><input type="date" value="${r.ov_published_until || ''}" data-f="ov_published_until"></td>
-      <td><span class="saved">saved ✓</span></td>`;
-    tr.querySelectorAll("input").forEach(inp =>
-      inp.addEventListener("change", () => save(r.id, tr)));
-    tbody.appendChild(tr);
-  }
-  document.getElementById("status").textContent =
-    rows.length + " clients · bill status + input date live from the database";
-}
-
-async function save(id, tr) {
-  const errorEl = document.getElementById("error");
-  const body = {
-    ov_published_until: tr.querySelector("[data-f=ov_published_until]").value,
-  };
-  try {
-    await api("/api/rows/" + encodeURIComponent(id), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-  } catch (e) {
-    errorEl.textContent = "Save failed: " + e.message;
-    return;
-  }
-  const badge = tr.querySelector(".saved");
-  badge.classList.add("show");
-  setTimeout(() => badge.classList.remove("show"), 1200);
-}
-
-function escapeHtml(s) {
-  return (s || "").replace(/[&<>"']/g, c =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-}
-
-load();
-</script>
+  <script src="/app.js"></script>
 </body>
 </html>
