@@ -103,13 +103,12 @@ function render() {
       <td>${r.bill_activated
           ? '<span class="badge badge-yes">Active</span>'
           : '<span class="badge badge-no">Inactive</span>'}</td>
+      <td>${r.pettycash_activated
+          ? '<span class="badge badge-yes">Active</span>'
+          : '<span class="badge badge-no">Inactive</span>'}</td>
       <td class="derived">${r.client_input_until
           ? escapeHtml(r.client_input_until)
-          : '<span class="none">—</span>'}</td>
-      <td><input type="date" value="${r.ov_published_until || ''}" data-f="ov_published_until" aria-label="OV published and checked until, for ${escapeAttr(r.name)}"></td>
-      <td class="save-cell"><span class="saved">Saved ✓</span></td>`;
-    tr.querySelectorAll("input").forEach(inp =>
-      inp.addEventListener("change", () => save(r.id, tr)));
+          : '<span class="none">—</span>'}</td>`;
     tbody.appendChild(tr);
   }
 
@@ -119,29 +118,6 @@ function render() {
   el("status").textContent = term
     ? `${shown} of ${total} clients shown · ${active} active`
     : `${total} clients · ${active} active · bill status + input date live from the database`;
-}
-
-async function save(id, tr) {
-  const body = {
-    ov_published_until: tr.querySelector("[data-f=ov_published_until]").value,
-  };
-  try {
-    await api("/api/rows/" + encodeURIComponent(id), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-  } catch (e) {
-    showError("Save failed: " + e.message);
-    return;
-  }
-  // keep local state in sync so filtering/re-renders don't lose the edit
-  const local = allRows.find(r => r.id === id);
-  if (local) local.ov_published_until = body.ov_published_until;
-
-  const badge = tr.querySelector(".saved");
-  badge.classList.add("show");
-  setTimeout(() => badge.classList.remove("show"), 1400);
 }
 
 // ---- helpers --------------------------------------------------------------
@@ -162,10 +138,6 @@ function showError(msg) {
 function escapeHtml(s) {
   return (s || "").replace(/[&<>"']/g, c =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-}
-
-function escapeAttr(s) {
-  return escapeHtml(s);
 }
 
 // ---- wiring ---------------------------------------------------------------

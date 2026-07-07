@@ -196,7 +196,6 @@
     font-size: 13px;
   }
   .none { color: var(--fg-subtle); }
-  .save-cell { text-align: right; width: 70px; }
 
   .badge {
     display: inline-flex;
@@ -216,35 +215,6 @@
   }
   .badge-yes { color: var(--success); background: var(--success-bg); }
   .badge-no  { color: var(--fg-subtle); background: var(--surface); }
-
-  input[type=date] {
-    font: inherit;
-    font-size: 13px;
-    font-family: var(--mono);
-    color: var(--fg);
-    background: var(--bg);
-    border: 1px solid var(--border-strong);
-    border-radius: 7px;
-    padding: 5px 8px;
-    outline: none;
-    transition: border-color .15s, box-shadow .15s;
-  }
-  input[type=date]:focus {
-    border-color: var(--fg-subtle);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--fg-subtle) 18%, transparent);
-  }
-  input[type=date]::-webkit-calendar-picker-indicator {
-    opacity: .55; cursor: pointer;
-  }
-
-  .saved {
-    color: var(--success);
-    font-size: 12px;
-    font-weight: 500;
-    opacity: 0;
-    transition: opacity .2s;
-  }
-  .saved.show { opacity: 1; }
 
   #error {
     color: var(--danger-fg);
@@ -314,18 +284,17 @@
 
     <div class="card">
       <div id="loading" hidden>
-        <div class="skel-row"><div class="skel" style="width:22%"></div><div class="skel" style="width:16%"></div><div class="skel" style="width:18%"></div><div class="skel" style="width:20%"></div></div>
-        <div class="skel-row"><div class="skel" style="width:26%"></div><div class="skel" style="width:14%"></div><div class="skel" style="width:16%"></div><div class="skel" style="width:18%"></div></div>
-        <div class="skel-row"><div class="skel" style="width:20%"></div><div class="skel" style="width:18%"></div><div class="skel" style="width:14%"></div><div class="skel" style="width:22%"></div></div>
+        <div class="skel-row"><div class="skel" style="width:22%"></div><div class="skel" style="width:16%"></div><div class="skel" style="width:16%"></div><div class="skel" style="width:18%"></div></div>
+        <div class="skel-row"><div class="skel" style="width:26%"></div><div class="skel" style="width:14%"></div><div class="skel" style="width:14%"></div><div class="skel" style="width:16%"></div></div>
+        <div class="skel-row"><div class="skel" style="width:20%"></div><div class="skel" style="width:18%"></div><div class="skel" style="width:16%"></div><div class="skel" style="width:14%"></div></div>
       </div>
       <table>
         <thead>
           <tr>
             <th>Client</th>
             <th>Bill activated?</th>
+            <th>Pettycash activated?</th>
             <th>Client input date until</th>
-            <th>OV published &amp; checked until</th>
-            <th></th>
           </tr>
         </thead>
         <tbody id="rows"></tbody>
