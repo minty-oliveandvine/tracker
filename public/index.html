@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Client Tracker</title>
+<style>
+  body { font-family: system-ui, -apple-system, sans-serif; margin: 32px; color: #1a1a1a; }
+  h1 { font-size: 20px; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid #ddd; padding: 8px 10px; text-align: left; }
+  th { background: #f4f4f5; font-weight: 600; }
+  tr:nth-child(even) td { background: #fafafa; }
+  input[type=date] { font: inherit; padding: 3px; }
+  .saved { color: #16a34a; font-size: 12px; visibility: hidden; }
+  .saved.show { visibility: visible; }
+  td.derived { color: #374151; font-variant-numeric: tabular-nums; }
+  .none { color: #9ca3af; }
+  .yes { color: #16a34a; font-weight: 600; }
+  .no { color: #b91c1c; font-weight: 600; }
+  #status { color: #6b7280; font-size: 13px; margin-bottom: 12px; }
+  #error { color: #b91c1c; font-size: 13px; margin-bottom: 12px; white-space: pre-wrap; }
+  .topbar { display: flex; gap: 12px; align-items: center; margin-bottom: 8px; }
+  button { font: inherit; padding: 4px 12px; cursor: pointer; }
+</style>
+</head>
+<body>
+  <h1>Client Tracker</h1>
+  <div class="topbar">
+    <button id="signout" hidden>Sign out</button>
+  </div>
+  <div id="status">Loading…</div>
+  <div id="error"></div>
+  <table>
+    <thead>
+      <tr>
+        <th>Client</th>
+        <th>Bill activated?</th>
+        <th>Client input date until</th>
+        <th>OV published and checked until</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+
+<script>
+// ---------------------------------------------------------------------------
+// Where the Minty backend (this project's tracker_app.py) is reachable from
+// the public internet. FILL THIS IN once you know the URL (e.g. the Cloudflare
+// tunnel hostname, or wherever Minty is hosted). No trailing slash.
+//
+// You can override it without editing this file by appending ?api=... to the
+// page URL, e.g.  https://your-frontend.vercel.app/?api=https://minty.example
+// (the value is remembered in localStorage after the first use).
+// ---------------------------------------------------------------------------
+const DEFAULT_API_BASE = "https://REPLACE-WITH-MINTY-BACKEND-URL";
+
+function resolveApiBase() {
+  const fromQuery = new URLSearchParams(location.search).get("api");
+  if (fromQuery) {
+    localStorage.setItem("tracker_api_base", fromQuery.replace(/\/+$/, ""));
+  }
+  return (localStorage.getItem("tracker_api_base") || DEFAULT_API_BASE)
+    .replace(/\/+$/, "");
+}
+const API_BASE = resolveApiBase();
+
+// ---- shared-password auth -------------------------------------------------
+// The backend uses HTTP Basic Auth (user "team" by default + shared password).
+// We collect it once, keep it for the session, and send it on every request.
+const AUTH_USER = "team"; // matches TRACKER_USER default on the backend
+let authHeader = sessionStorage.getItem("tracker_auth") || "";
+
+function ensureAuth() {
+  if (authHeader) return true;
+  const pw = prompt("Enter the Client Tracker shared password:");
+  if (pw === null) return false; // cancelled
+  authHeader = "Basic " + btoa(AUTH_USER + ":" + pw);
+  sessionStorage.setItem("tracker_auth", authHeader);
+  return true;
+}
+
+function signOut() {
+  authHeader = "";
+  sessionStorage.removeItem("tracker_auth");
+  location.reload();
+}
+document.getElementById("signout").addEventListener("click", signOut);
+
+async function api(path, opts = {}) {
+  if (!ensureAuth()) throw new Error("Password required.");
+  const res = await fetch(API_BASE + path, {
+    ...opts,
+    headers: { ...(opts.headers || {}), Authorization: authHeader },
+  });
+  if (res.status === 401) {
+    // Wrong password — clear it so the next attempt re-prompts.
+    signOut();
+    throw new Error("Wrong password.");
+  }
+  if (!res.ok) throw new Error("Request failed (" + res.status + ").");
+  return res;
+}
+
+// ---- rendering ------------------------------------------------------------
+async function load() {
+  const errorEl = document.getElementById("error");
+  errorEl.textContent = "";
+  if (API_BASE.includes("REPLACE-WITH")) {
+    errorEl.textContent =
+      "Backend URL is not configured. Set DEFAULT_API_BASE in index.html, " +
+      "or open this page with ?api=https://your-backend-url";
+    document.getElementById("status").textContent = "";
+    return;
+  }
+  let rows;
+  try {
+    const res = await api("/api/rows");
+    rows = await res.json();
+  } catch (e) {
+    document.getElementById("status").textContent = "";
+    errorEl.textContent = "Could not load: " + e.message;
+    return;
+  }
+  document.getElementById("signout").hidden = false;
+  const tbody = document.getElementById("rows");
+  tbody.innerHTML = "";
+  for (const r of rows) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${escapeHtml(r.name)}</td>
+      <td class="derived">${r.bill_activated
+          ? '<span class="yes">Yes</span>' : '<span class="no">No</span>'}</td>
+      <td class="derived">${r.client_input_until || '<span class="none">—</span>'}</td>
+      <td><input type="date" value="${r.ov_published_until || ''}" data-f="ov_published_until"></td>
+      <td><span class="saved">saved ✓</span></td>`;
+    tr.querySelectorAll("input").forEach(inp =>
+      inp.addEventListener("change", () => save(r.id, tr)));
+    tbody.appendChild(tr);
+  }
+  document.getElementById("status").textContent =
+    rows.length + " clients · bill status + input date live from the database";
+}
+
+async function save(id, tr) {
+  const errorEl = document.getElementById("error");
+  const body = {
+    ov_published_until: tr.querySelector("[data-f=ov_published_until]").value,
+  };
+  try {
+    await api("/api/rows/" + encodeURIComponent(id), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch (e) {
+    errorEl.textContent = "Save failed: " + e.message;
+    return;
+  }
+  const badge = tr.querySelector(".saved");
+  badge.classList.add("show");
+  setTimeout(() => badge.classList.remove("show"), 1200);
+}
+
+function escapeHtml(s) {
+  return (s || "").replace(/[&<>"']/g, c =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+load();
+</script>
+</body>
+</html>
