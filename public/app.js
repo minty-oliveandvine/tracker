@@ -484,16 +484,18 @@ function syncRangeInputs() {
     return;
   }
   opSel.hidden = false;
+  // First option is a greyed "is…" placeholder (empty value = no operator yet).
+  opSel.appendChild(opt("", "is…"));
   if (col.type === "number") {
-    opSel.appendChild(opt(">=", "is at least"));
-    opSel.appendChild(opt("<=", "is at most"));
+    opSel.appendChild(opt(">=", "at least"));
+    opSel.appendChild(opt("<=", "at most"));
     opSel.appendChild(opt("=", "equals"));
     numIn.hidden = false;
     dateIn.hidden = true;
   } else { // date
-    opSel.appendChild(opt("after", "is after"));
-    opSel.appendChild(opt("before", "is before"));
-    opSel.appendChild(opt("on", "is on"));
+    opSel.appendChild(opt("after", "after"));
+    opSel.appendChild(opt("before", "before"));
+    opSel.appendChild(opt("on", "on"));
     numIn.hidden = true;
     dateIn.hidden = false;
   }
@@ -536,14 +538,14 @@ function buildSortButtons() {
 const CHEV = 'fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"';
 const ARROW_SVG = {
   // neutral: up chevron over down chevron — reads as "sortable both ways".
-  neutral: '<svg viewBox="0 0 12 12" width="14" height="14" aria-hidden="true">'
+  neutral: '<svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true">'
     + '<path d="M3 5L6 2 9 5" ' + CHEV + '/>'
     + '<path d="M3 7L6 10 9 7" ' + CHEV + '/></svg>',
   // ascending: single up chevron
-  up: '<svg viewBox="0 0 12 12" width="14" height="14" aria-hidden="true">'
+  up: '<svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true">'
     + '<path d="M2.5 8L6 4 9.5 8" ' + CHEV + '/></svg>',
   // descending: single down chevron
-  down: '<svg viewBox="0 0 12 12" width="14" height="14" aria-hidden="true">'
+  down: '<svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true">'
     + '<path d="M2.5 4L6 8 9.5 4" ' + CHEV + '/></svg>',
 };
 
@@ -640,9 +642,12 @@ document.addEventListener("keydown", (e) => {
 });
 
 // Range filter: column -> operator/value, then apply on any change.
-// Grey the field select while no field is chosen (placeholder showing).
+// Grey the field select while no field is chosen, and the date input while
+// no date is picked (placeholder state). Real values render black.
 function syncRfPlaceholder() {
   el("rf-col").classList.toggle("is-placeholder", !el("rf-col").value);
+  el("rf-op").classList.toggle("is-placeholder", !el("rf-op").value);
+  el("rf-date").classList.toggle("is-placeholder", !el("rf-date").value);
 }
 
 // Reset the range filter back to the empty editor state.
@@ -657,14 +662,15 @@ function clearRfFilter() {
 el("rf-col").addEventListener("change", () => {
   syncRangeInputs();
   syncRfPlaceholder();
+  // New field → no operator chosen yet (op select starts on the "is…" placeholder).
   rangeFilter = { col: el("rf-col").value, op: "", value: "" };
-  // Seed op with the first available option so a value alone filters.
-  if (!el("rf-op").hidden) rangeFilter.op = el("rf-op").value;
   updateClearVisibility();
   render();
 });
 el("rf-op").addEventListener("change", () => {
   rangeFilter.op = el("rf-op").value;
+  syncRfPlaceholder(); // op turns black once a real operator is picked
+  updateClearVisibility();
   render();
 });
 function onRangeValue() {
@@ -672,6 +678,7 @@ function onRangeValue() {
   rangeFilter.value = col && col.type === "date"
     ? el("rf-date").value
     : el("rf-val").value;
+  syncRfPlaceholder(); // date turns black once picked, grey when cleared
   updateClearVisibility();
   render();
 }

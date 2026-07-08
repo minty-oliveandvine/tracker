@@ -170,11 +170,10 @@
   }
   .controls select:hover { background-color: var(--surface-hover); }
   .controls select:focus { border-color: var(--fg-subtle); }
-  /* grey out the select while it's showing the "choose a field…" placeholder,
-     matching the grey "All clients" placeholder on the Clients trigger */
-  .controls select.is-placeholder { color: var(--fg-subtle); }
-  /* the operator select and value/date inputs are shown greyed */
-  #rf-op, #rf-val, #rf-date { color: var(--fg-subtle); }
+  /* grey while showing a placeholder ("choose a field…", empty date);
+     once a real value is chosen the text is black (default --fg). */
+  .controls select.is-placeholder,
+  #rf-date.is-placeholder { color: var(--fg-subtle); }
   #rf-val::placeholder { color: var(--fg-subtle); }
   /* the Filter column select matches the Clients trigger width */
   #rf-col { min-width: 160px; }
@@ -259,7 +258,14 @@
   .ms-chip .x:hover { background: var(--surface-hover); color: var(--fg); }
   .ms-placeholder { color: var(--fg-subtle); text-align: left; }
   /* caret always pinned to the right; content (chips or placeholder) stays left */
-  .ms-caret { color: var(--fg-subtle); font-size: 15px; line-height: 1; margin-left: auto; }
+  /* same chevron as the Filter selects: grey SVG, drawn via currentColor */
+  .ms-caret {
+    color: var(--fg-subtle);
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+  }
+  .ms-caret svg { display: block; }
 
   .ms-panel {
     position: absolute;
@@ -642,7 +648,7 @@
                   aria-haspopup="listbox" aria-expanded="false">
             <span class="ms-chips" id="client-ms-chips"></span>
             <span class="ms-placeholder" id="client-ms-placeholder">All clients</span>
-            <span class="ms-caret">▾</span>
+            <span class="ms-caret" aria-hidden="true"><svg viewBox="0 0 10 10" width="10" height="10"><path d="M2 4l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
           </button>
           <div class="ms-panel" id="client-ms-panel" hidden role="listbox" aria-multiselectable="true">
             <div class="ms-search">
@@ -663,7 +669,7 @@
         <span class="ctl-label">Filter</span>
         <span class="rf-lead">where</span>
         <select id="rf-col" aria-label="Field to filter by">
-          <option value="">choose a field…</option>
+          <option value="">Dates/Numbers</option>
         </select>
         <select id="rf-op" aria-label="Filter comparison" hidden></select>
         <input id="rf-val" type="number" placeholder="value" aria-label="Filter value" hidden>
