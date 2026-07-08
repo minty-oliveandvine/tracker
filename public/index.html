@@ -124,9 +124,13 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 8px 18px;
-    margin-bottom: 16px;
-    font-size: 13px;
+    gap: 12px 24px;
+    margin-bottom: 20px;
+    padding: 14px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 15px;
   }
   .control-group {
     display: inline-flex;
@@ -135,12 +139,13 @@
   }
   .control-group > .ctl-label {
     color: var(--fg-muted);
-    font-size: 12px;
+    font-size: 13px;
+    font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.02em;
     white-space: nowrap;
   }
-  .rf-lead { color: var(--fg-subtle); font-size: 13px; }
+  .rf-lead { color: var(--fg-subtle); font-size: 14px; }
   .chips { display: inline-flex; gap: 4px; }
   .chip {
     font: inherit;
@@ -163,7 +168,7 @@
   }
   .controls select {
     font: inherit;
-    font-size: 13px;
+    font-size: 14px;
     color: var(--fg);
     /* strip the native OS caret and draw our own ▾ so the Filter dropdowns
        look identical to the Clients trigger */
@@ -176,7 +181,7 @@
     background-position: right 8px center;
     border: 1px solid var(--border-strong);
     border-radius: 8px;
-    padding: 5px 26px 5px 8px;
+    padding: 8px 28px 8px 11px;
     cursor: pointer;
     outline: none;
     transition: border-color .12s, background-color .12s;
@@ -186,10 +191,10 @@
   /* grey while showing a placeholder ("choose a field…", empty date);
      once a real value is chosen the text is black (default --fg). */
   .controls select.is-placeholder,
-  #rf-date.is-placeholder { color: var(--fg-subtle); }
+  #rf-date.is-placeholder { color: var(--fg-subtle) !important; }
   #rf-val::placeholder { color: var(--fg-subtle); }
   /* the Filter column select matches the Clients trigger width */
-  #rf-col { min-width: 160px; }
+  #rf-col { min-width: 180px; }
   /* match the Clients trigger's focus highlight for full parity */
   .ms-trigger:focus-visible { border-color: var(--fg-subtle); outline: none; }
   .controls input[type="number"] {
@@ -231,13 +236,13 @@
   .multiselect { position: relative; display: inline-block; }
   .ms-trigger {
     font: inherit;
-    font-size: 13px;
+    font-size: 14px;
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    min-width: 160px;
+    min-width: 180px;
     max-width: 340px;
-    padding: 5px 8px;
+    padding: 8px 11px;
     border: 1px solid var(--border-strong);
     border-radius: 8px;
     background: var(--bg);
@@ -644,15 +649,6 @@
     <div id="error" hidden></div>
 
     <div class="toolbar" id="toolbar" hidden>
-      <label class="search">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-             stroke="currentColor" stroke-width="2" stroke-linecap="round">
-          <circle cx="11" cy="11" r="7"></circle>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-        </svg>
-        <input type="search" id="search" placeholder="Search clients…"
-               autocomplete="off" spellcheck="false">
-      </label>
       <div class="spacer"></div>
       <button id="refresh" class="primary">Refresh</button>
     </div>
@@ -686,7 +682,7 @@
       <div class="control-group rf-group">
         <span class="ctl-label">Filter</span>
         <span class="rf-lead">where</span>
-        <select id="rf-col" aria-label="Field to filter by">
+        <select id="rf-col" class="is-placeholder" aria-label="Field to filter by">
           <option value="">Dates/Numbers</option>
         </select>
         <select id="rf-op" aria-label="Filter comparison" hidden></select>

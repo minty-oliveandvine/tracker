@@ -604,11 +604,8 @@ function updateClearVisibility() {
 }
 
 // ---- wiring ---------------------------------------------------------------
-el("search").addEventListener("input", (e) => {
-  filterText = e.target.value;
-  updateClearVisibility();
-  render();
-});
+// (Client-name search was removed — the Clients multi-select covers filtering
+// by client. filterText stays "" so the filter logic is a no-op.)
 el("refresh").addEventListener("click", load);
 
 // Client multi-select dropdown.
@@ -691,8 +688,6 @@ el("rf-date").addEventListener("input", onRangeValue);
 
 // Clear all filters + sort back to defaults.
 el("clear-controls").addEventListener("click", () => {
-  filterText = "";
-  el("search").value = "";
   selectedClients.clear();
   el("client-ms-search").value = "";
   renderClientTrigger();
