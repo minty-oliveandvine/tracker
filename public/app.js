@@ -64,7 +64,7 @@ async function load() {
 
   setLoading(true);
   try {
-    const res = await api("/api/rows");
+    const res = await api("/api/tracker");
     allRows = await res.json();
   } catch (e) {
     statusEl.textContent = "";
@@ -100,24 +100,71 @@ function render() {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td class="name">${escapeHtml(r.name)}</td>
-      <td>${r.bill_activated
-          ? '<span class="badge badge-yes">Active</span>'
-          : '<span class="badge badge-no">Inactive</span>'}</td>
-      <td>${r.pettycash_activated
-          ? '<span class="badge badge-yes">Active</span>'
-          : '<span class="badge badge-no">Inactive</span>'}</td>
-      <td class="derived">${r.client_input_until
-          ? escapeHtml(r.client_input_until)
-          : '<span class="none">—</span>'}</td>`;
+      <td class="flag grp-start">${checkmark(r.pettycash)}</td>
+      <td class="flag">${checkmark(r.billing)}</td>
+      <td class="derived grp-start">${dateCell(r.pc_latest_submitted)}</td>
+      <td class="derived">${dateCell(r.pc_latest_published)}</td>
+      <td class="num grp-start">${numCell(r.num_paid)}</td>
+      <td class="num">${numCell(r.num_partialpaid)}</td>
+      <td class="num">${numCell(r.num_unpaid)}</td>
+      <td class="num">${numCell(r.num_published)}</td>
+      <td class="derived">${datetimeCell(r.latest_bill_published)}</td>
+      <td class="derived">${datetimeCell(r.latest_bill_update)}</td>`;
+    // Use entity_id as a stable row key (not displayed).
+    if (r.entity_id != null) tr.dataset.entityId = r.entity_id;
     tbody.appendChild(tr);
   }
 
-  const active = allRows.filter(r => r.bill_activated).length;
-  const shown = rows.length;
   const total = allRows.length;
+  const pcOn = allRows.filter(r => r.pettycash).length;
+  const billOn = allRows.filter(r => r.billing).length;
+  const shown = rows.length;
   el("status").textContent = term
-    ? `${shown} of ${total} clients shown · ${active} active`
-    : `${total} clients · ${active} active · bill status + input date live from the database`;
+    ? `${shown} of ${total} clients shown`
+    : `${total} clients · ${pcOn} with Petty Cash · ${billOn} with Billing · live from the database`;
+}
+
+// ---- cell formatters ------------------------------------------------------
+function checkmark(on) {
+  return on
+    ? '<span class="check check-yes" title="Enabled">✅</span>'
+    : '<span class="check check-no" title="Disabled">❌</span>';
+}
+
+function numCell(n) {
+  const v = Number(n || 0);
+  return v === 0 ? '<span class="zero">0</span>' : String(v);
+}
+
+// Date-only field (YYYY-MM-DD). Blank/absent -> em dash.
+function dateCell(v) {
+  if (!v) return '<span class="none">—</span>';
+  return escapeHtml(String(v).slice(0, 10));
+}
+
+// Datetime field: show the date, with the full timestamp + relative age on hover.
+function datetimeCell(v) {
+  if (!v) return '<span class="none">—</span>';
+  const d = new Date(v);
+  if (isNaN(d.getTime())) return escapeHtml(String(v));
+  const date = d.toISOString().slice(0, 10);
+  const rel = relativeTime(d);
+  const full = escapeHtml(String(v));
+  return `<span title="${full}${rel ? " · " + rel : ""}">${date}</span>`;
+}
+
+function relativeTime(d) {
+  const diffMs = Date.now() - d.getTime();
+  if (diffMs < 0) return "";
+  const sec = Math.floor(diffMs / 1000);
+  const min = Math.floor(sec / 60);
+  const hr = Math.floor(min / 60);
+  const day = Math.floor(hr / 24);
+  if (day > 30) return "";
+  if (day >= 1) return `${day}d ago`;
+  if (hr >= 1) return `${hr}h ago`;
+  if (min >= 1) return `${min}m ago`;
+  return "just now";
 }
 
 // ---- helpers --------------------------------------------------------------
@@ -146,5 +193,13 @@ el("search").addEventListener("input", (e) => {
   render();
 });
 el("refresh").addEventListener("click", load);
+
+// Column titles toggle their description underneath when clicked.
+document.querySelectorAll(".col-title").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const desc = btn.parentElement.querySelector(".col-desc");
+    if (desc) desc.hidden = !desc.hidden;
+  });
+});
 
 load();

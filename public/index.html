@@ -63,7 +63,8 @@
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
   }
-  .wrap { max-width: 920px; margin: 0 auto; }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  .table-scroll { overflow-x: auto; }
 
   header {
     display: flex;
@@ -194,8 +195,80 @@
     font-family: var(--mono);
     font-variant-numeric: tabular-nums;
     font-size: 13px;
+    white-space: nowrap;
   }
+  td.num {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 13px;
+    text-align: right;
+  }
+  td.num .zero { color: var(--fg-subtle); }
+  td.flag { text-align: center; }
   .none { color: var(--fg-subtle); }
+
+  /* boolean checkmarks */
+  .check { font-size: 14px; line-height: 1; }
+  .check-yes { color: var(--success); }
+  .check-no  { color: var(--fg-subtle); }
+
+  /* column group headers */
+  thead tr.groups th {
+    text-align: center;
+    color: var(--fg-subtle);
+    font-size: 11px;
+    letter-spacing: 0.03em;
+    padding: 8px 16px 6px;
+    border-bottom: none;
+    background: var(--surface);
+  }
+  thead tr.groups th.grp {
+    border-left: 1px solid var(--border);
+  }
+  thead th.num { text-align: right; }
+  thead th.flag { text-align: center; }
+
+  /* clickable column titles that toggle a description underneath */
+  .col-title {
+    /* reset button chrome — inherit the th's typography */
+    font: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    background: none;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    text-align: inherit;
+    white-space: nowrap;
+    transition: color .12s;
+  }
+  .col-title:hover { color: var(--fg-subtle); background: none; }
+  .col-title:active { transform: none; }
+  .col-title:focus-visible {
+    outline: 2px solid var(--green);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+  .col-desc {
+    margin-top: 6px;
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--fg-subtle);
+    line-height: 1.4;
+    max-width: 180px;
+    white-space: normal;
+  }
+  thead th.num .col-desc { margin-left: auto; text-align: right; }
+  thead th.flag .col-desc { margin-inline: auto; text-align: center; }
+  /* subtle vertical separators between groups on both header + body */
+  th.grp-start, td.grp-start { border-left: 1px solid var(--border); }
 
   .badge {
     display: inline-flex;
@@ -284,21 +357,69 @@
 
     <div class="card">
       <div id="loading" hidden>
-        <div class="skel-row"><div class="skel" style="width:22%"></div><div class="skel" style="width:16%"></div><div class="skel" style="width:16%"></div><div class="skel" style="width:18%"></div></div>
-        <div class="skel-row"><div class="skel" style="width:26%"></div><div class="skel" style="width:14%"></div><div class="skel" style="width:14%"></div><div class="skel" style="width:16%"></div></div>
-        <div class="skel-row"><div class="skel" style="width:20%"></div><div class="skel" style="width:18%"></div><div class="skel" style="width:16%"></div><div class="skel" style="width:14%"></div></div>
+        <div class="skel-row"><div class="skel" style="width:18%"></div><div class="skel" style="flex:1"></div><div class="skel" style="flex:1"></div><div class="skel" style="flex:1"></div></div>
+        <div class="skel-row"><div class="skel" style="width:22%"></div><div class="skel" style="flex:1"></div><div class="skel" style="flex:1"></div><div class="skel" style="flex:1"></div></div>
+        <div class="skel-row"><div class="skel" style="width:16%"></div><div class="skel" style="flex:1"></div><div class="skel" style="flex:1"></div><div class="skel" style="flex:1"></div></div>
       </div>
+      <div class="table-scroll">
       <table>
         <thead>
+          <tr class="groups">
+            <th></th>
+            <th class="grp" colspan="2">Modules</th>
+            <th class="grp" colspan="2">Reports</th>
+            <th class="grp" colspan="6">Bills</th>
+          </tr>
           <tr>
-            <th>Client</th>
-            <th>Bill activated?</th>
-            <th>Pettycash activated?</th>
-            <th>Client input date until</th>
+            <th>
+              <button type="button" class="col-title">Client</button>
+              <div class="col-desc" hidden>The client entity's name.</div>
+            </th>
+            <th class="flag grp-start">
+              <button type="button" class="col-title">Petty Cash</button>
+              <div class="col-desc" hidden>Whether the Petty Cash module is enabled for this client.</div>
+            </th>
+            <th class="flag">
+              <button type="button" class="col-title">Billing</button>
+              <div class="col-desc" hidden>Whether the Billing (BILL) module is enabled for this client.</div>
+            </th>
+            <th class="grp-start">
+              <button type="button" class="col-title">Last Submitted</button>
+              <div class="col-desc" hidden>Date of the client's most recent petty-cash report, submitted or not.</div>
+            </th>
+            <th>
+              <button type="button" class="col-title">Last Published</button>
+              <div class="col-desc" hidden>Date of the client's most recent published (completed) petty-cash report.</div>
+            </th>
+            <th class="num grp-start">
+              <button type="button" class="col-title">Paid</button>
+              <div class="col-desc" hidden>Number of bills marked fully paid.</div>
+            </th>
+            <th class="num">
+              <button type="button" class="col-title">Partially Paid</button>
+              <div class="col-desc" hidden>Number of bills partially paid.</div>
+            </th>
+            <th class="num">
+              <button type="button" class="col-title">Unpaid</button>
+              <div class="col-desc" hidden>Number of submitted bills not yet paid.</div>
+            </th>
+            <th class="num">
+              <button type="button" class="col-title">Published Bills</button>
+              <div class="col-desc" hidden>Number of bills that have been published.</div>
+            </th>
+            <th>
+              <button type="button" class="col-title">Last Bill Published</button>
+              <div class="col-desc" hidden>Timestamp a bill was most recently published for this client.</div>
+            </th>
+            <th>
+              <button type="button" class="col-title">Last Bill Activity</button>
+              <div class="col-desc" hidden>Timestamp of the most recent bill create/update.</div>
+            </th>
           </tr>
         </thead>
         <tbody id="rows"></tbody>
       </table>
+      </div>
       <div id="empty" hidden></div>
     </div>
   </div>
