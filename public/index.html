@@ -504,10 +504,17 @@
   }
   .sort-btn:hover { color: var(--fg); background: var(--surface-hover); }
   .sort-btn:active { transform: none; }
-  .sort-btn .arrow { font-size: 10px; opacity: .55; transition: opacity .12s, color .12s; }
+  .sort-btn .arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    opacity: .55;
+    transition: opacity .12s, color .12s;
+  }
+  .sort-btn .arrow svg { display: block; }
   /* primary sort (newest click): bold black arrow */
   .sort-btn.primary { color: var(--fg); }
-  .sort-btn.primary .arrow { opacity: 1; font-weight: 700; }
+  .sort-btn.primary .arrow { opacity: 1; }
   /* secondary sorts (tie-breakers): still directional, but greyed */
   .sort-btn.secondary { color: var(--fg-subtle); }
   .sort-btn.secondary .arrow { opacity: .8; }
@@ -659,7 +666,7 @@
         <input id="rf-date" type="date" aria-label="Filter date" hidden>
       </div>
 
-      <span class="ctl-hint">Click ▾ on a column to sort (▼ high→low, ▲ low→high) · click again to reverse · click a third time to remove</span>
+      <span class="ctl-hint">Click the arrow on a column to sort (down = high→low, up = low→high) · click again to reverse · click a third time to remove</span>
 
       <button class="btn-clear" id="clear-controls" type="button" hidden>Clear all</button>
     </div>

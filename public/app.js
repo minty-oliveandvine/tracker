@@ -521,25 +521,44 @@ function buildSortButtons() {
     btn.className = "sort-btn";
     btn.dataset.key = col.key;
     btn.title = "Sort by " + col.label;
-    btn.innerHTML = '<span class="arrow">▾</span>';
+    btn.innerHTML = '<span class="arrow">' + ARROW_SVG.neutral + '</span>';
     btn.addEventListener("click", () => cycleSort(col.key));
     head.appendChild(btn);
   });
   renderSortIndicators();
 }
 
-// Sort by a single column at a time (no multi-column ranking). Clicking a
-// column's arrow cycles ITS state and clears any other sort:
-//   (not sorted) → desc → asc → off.
+// Sort-direction arrows drawn as inline SVG (not Unicode glyphs) so they can
+// NEVER render as a missing-character box on any browser/font. `currentColor`
+// makes them inherit the button's colour, so the primary/secondary CSS still
+// controls black vs grey. viewBox 0 0 10 10.
+const ARROW_SVG = {
+  // faint UP-over-DOWN chevron for the unsorted/neutral state — points both
+  // ways so it reads as "sortable", never mistaken for the down (desc) arrow.
+  neutral: '<svg viewBox="0 0 10 10" width="9" height="9" aria-hidden="true">'
+    + '<path d="M2.5 4.2L5 1.7 7.5 4.2" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>'
+    + '<path d="M2.5 5.8L5 8.3 7.5 5.8" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  // solid up triangle — ascending
+  up: '<svg viewBox="0 0 10 10" width="9" height="9" aria-hidden="true">'
+    + '<path d="M5 2L8.5 8H1.5Z" fill="currentColor"/></svg>',
+  // solid down triangle — descending
+  down: '<svg viewBox="0 0 10 10" width="9" height="9" aria-hidden="true">'
+    + '<path d="M5 8L1.5 2H8.5Z" fill="currentColor"/></svg>',
+};
+
+// Multi-column sort. Clicking a column cycles ITS state — desc → asc → off —
+// and promotes it to PRIMARY (front of the list, shown black). Columns sorted
+// earlier stay active as tie-breakers and are shown grey.
 function cycleSort(key) {
-  const current = sortKeys.length === 1 && sortKeys[0].key === key
-    ? sortKeys[0] : null;
-  if (!current) {
-    sortKeys = [{ key, dir: "desc" }];   // first click on this column: descending
-  } else if (current.dir === "desc") {
-    sortKeys = [{ key, dir: "asc" }];    // second click: ascending
+  const idx = sortKeys.findIndex(s => s.key === key);
+  if (idx === -1) {
+    sortKeys.unshift({ key, dir: "desc" });   // first click: descending, becomes primary
+  } else if (sortKeys[idx].dir === "desc") {
+    const [entry] = sortKeys.splice(idx, 1);   // second click: ascending, re-promote
+    entry.dir = "asc";
+    sortKeys.unshift(entry);
   } else {
-    sortKeys = [];                        // third click: no sort
+    sortKeys.splice(idx, 1);                    // third click: remove
   }
   renderSortIndicators();
   updateClearVisibility();
@@ -556,12 +575,11 @@ function renderSortIndicators() {
     const arrow = btn.querySelector(".arrow");
     btn.classList.remove("active", "primary", "secondary");
     if (pos === -1) {
-      // Not sorted: faint neutral marker (a small down caret) — using a widely
-      // supported glyph so it never renders as a missing-character box.
-      arrow.textContent = "▾";
+      // Not sorted: faint neutral double-chevron (SVG, never a missing glyph).
+      arrow.innerHTML = ARROW_SVG.neutral;
     } else {
-      // Active: arrow points the way the data runs — ▲ ascending, ▼ descending.
-      arrow.textContent = sortKeys[pos].dir === "asc" ? "▲" : "▼";
+      // Active: arrow points the way the data runs — up ascending, down descending.
+      arrow.innerHTML = sortKeys[pos].dir === "asc" ? ARROW_SVG.up : ARROW_SVG.down;
       btn.classList.add("active", pos === 0 ? "primary" : "secondary");
     }
   });
@@ -659,7 +677,7 @@ function onRangeValue() {
 el("rf-val").addEventListener("input", onRangeValue);
 el("rf-date").addEventListener("input", onRangeValue);
 
-// (Sorting is driven by the ▾ arrows in the column headers — see cycleSort.)
+// (Sorting is driven by the SVG arrows in the column headers — see cycleSort.)
 
 // Clear all filters + sort back to defaults.
 el("clear-controls").addEventListener("click", () => {
