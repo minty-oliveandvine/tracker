@@ -531,18 +531,20 @@ function buildSortButtons() {
 // NEVER render as a missing-character box on any browser/font. `currentColor`
 // makes them inherit the button's colour, so the primary/secondary CSS still
 // controls black vs grey. viewBox 0 0 10 10.
+// All three arrows are STROKED chevrons (fill:none) — never solid fills, so
+// they can't collapse into a filled square at small sizes. 14px, thick stroke.
+const CHEV = 'fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"';
 const ARROW_SVG = {
-  // faint UP-over-DOWN chevron for the unsorted/neutral state — points both
-  // ways so it reads as "sortable", never mistaken for the down (desc) arrow.
-  neutral: '<svg viewBox="0 0 10 10" width="13" height="13" aria-hidden="true">'
-    + '<path d="M2.5 4.2L5 1.7 7.5 4.2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>'
-    + '<path d="M2.5 5.8L5 8.3 7.5 5.8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  // solid up triangle — ascending
-  up: '<svg viewBox="0 0 10 10" width="13" height="13" aria-hidden="true">'
-    + '<path d="M5 2.5L8 7.5H2Z" fill="currentColor"/></svg>',
-  // solid down triangle — descending
-  down: '<svg viewBox="0 0 10 10" width="13" height="13" aria-hidden="true">'
-    + '<path d="M5 7.5L2 2.5H8Z" fill="currentColor"/></svg>',
+  // neutral: up chevron over down chevron — reads as "sortable both ways".
+  neutral: '<svg viewBox="0 0 12 12" width="14" height="14" aria-hidden="true">'
+    + '<path d="M3 5L6 2 9 5" ' + CHEV + '/>'
+    + '<path d="M3 7L6 10 9 7" ' + CHEV + '/></svg>',
+  // ascending: single up chevron
+  up: '<svg viewBox="0 0 12 12" width="14" height="14" aria-hidden="true">'
+    + '<path d="M2.5 8L6 4 9.5 8" ' + CHEV + '/></svg>',
+  // descending: single down chevron
+  down: '<svg viewBox="0 0 12 12" width="14" height="14" aria-hidden="true">'
+    + '<path d="M2.5 4L6 8 9.5 4" ' + CHEV + '/></svg>',
 };
 
 // Multi-column sort. Clicking a column cycles ITS state — desc → asc → off —
@@ -638,8 +640,23 @@ document.addEventListener("keydown", (e) => {
 });
 
 // Range filter: column -> operator/value, then apply on any change.
+// Grey the field select while no field is chosen (placeholder showing).
+function syncRfPlaceholder() {
+  el("rf-col").classList.toggle("is-placeholder", !el("rf-col").value);
+}
+
+// Reset the range filter back to the empty editor state.
+function clearRfFilter() {
+  rangeFilter = { col: "", op: "", value: "" };
+  el("rf-col").value = "";
+  el("rf-val").value = "";
+  el("rf-date").value = "";
+  syncRangeInputs();
+  syncRfPlaceholder();
+}
 el("rf-col").addEventListener("change", () => {
   syncRangeInputs();
+  syncRfPlaceholder();
   rangeFilter = { col: el("rf-col").value, op: "", value: "" };
   // Seed op with the first available option so a value alone filters.
   if (!el("rf-op").hidden) rangeFilter.op = el("rf-op").value;
@@ -671,9 +688,7 @@ el("clear-controls").addEventListener("click", () => {
   el("client-ms-search").value = "";
   renderClientTrigger();
   renderClientOptions();
-  rangeFilter = { col: "", op: "", value: "" };
-  el("rf-col").value = ""; syncRangeInputs();
-  el("rf-val").value = ""; el("rf-date").value = "";
+  clearRfFilter();
   // Reset sort to the default (clients A→Z), not "no sort".
   sortKeys = [{ key: "__name", dir: "asc" }];
   renderSortIndicators();
@@ -694,4 +709,5 @@ document.querySelectorAll(".col-title").forEach((btn) => {
 
 buildControlOptions();
 buildSortButtons();
+syncRfPlaceholder();
 load();

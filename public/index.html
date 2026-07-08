@@ -170,6 +170,12 @@
   }
   .controls select:hover { background-color: var(--surface-hover); }
   .controls select:focus { border-color: var(--fg-subtle); }
+  /* grey out the select while it's showing the "choose a field…" placeholder,
+     matching the grey "All clients" placeholder on the Clients trigger */
+  .controls select.is-placeholder { color: var(--fg-subtle); }
+  /* the operator select and value/date inputs are shown greyed */
+  #rf-op, #rf-val, #rf-date { color: var(--fg-subtle); }
+  #rf-val::placeholder { color: var(--fg-subtle); }
   /* the Filter column select matches the Clients trigger width */
   #rf-col { min-width: 160px; }
   /* match the Clients trigger's focus highlight for full parity */
@@ -511,24 +517,28 @@
     display: inline-flex;
     align-items: center;
     gap: 2px;
-    transition: color .12s, background .12s;
+    transition: color .12s;
   }
-  .sort-btn:hover { color: var(--fg); background: var(--surface-hover); }
+  /* NEVER paint a background on the sort arrow — override the generic
+     `button:hover` rule that would otherwise draw a dark box behind it. */
+  .sort-btn,
+  .sort-btn:hover,
+  .sort-btn:focus,
+  .sort-btn:focus-visible,
+  .sort-btn:active { background: none !important; outline: none; }
   .sort-btn:active { transform: none; }
   .sort-btn .arrow {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    opacity: .55;
-    transition: opacity .12s, color .12s;
+    opacity: 1;
+    transition: color .12s;
   }
   .sort-btn .arrow svg { display: block; }
-  /* primary sort (newest click): bold black arrow */
-  .sort-btn.primary { color: var(--fg); }
-  .sort-btn.primary .arrow { opacity: 1; }
-  /* secondary sorts (tie-breakers): still directional, but greyed */
+  /* neutral + tie-breaker (secondary) arrows are grey */
   .sort-btn.secondary { color: var(--fg-subtle); }
-  .sort-btn.secondary .arrow { opacity: .8; }
+  /* the most recently sorted column (primary) shows a BLACK arrow */
+  .sort-btn.primary { color: var(--fg); }
   .ctl-hint {
     color: var(--fg-subtle);
     font-size: 12px;
