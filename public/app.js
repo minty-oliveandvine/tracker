@@ -420,20 +420,22 @@ function cycleSort(key) {
   render();
 }
 
-// Reflect the current sortKeys on the header arrows: direction glyph + active
-// state. (Multi-sort still works by click order; no rank badge is shown.)
+// Reflect the current sortKeys on the header arrows. Priority is shown by
+// COLOUR (not badges): the primary sort (pos 0, newest click) is bold/black;
+// lower-priority tie-breakers are greyed but still directional; unsorted
+// columns show a faint neutral glyph.
 function renderSortIndicators() {
   document.querySelectorAll(".sort-btn").forEach(btn => {
     const pos = sortKeys.findIndex(s => s.key === btn.dataset.key);
     const arrow = btn.querySelector(".arrow");
+    btn.classList.remove("active", "primary", "secondary");
     if (pos === -1) {
       // Not sorted: neutral up/down glyph so it doesn't imply a direction.
-      btn.classList.remove("active");
       arrow.textContent = "⇅";
     } else {
       // Active: arrow points the way the data runs — ▲ ascending, ▼ descending.
-      btn.classList.add("active");
       arrow.textContent = sortKeys[pos].dir === "asc" ? "▲" : "▼";
+      btn.classList.add("active", pos === 0 ? "primary" : "secondary");
     }
   });
 }

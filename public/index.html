@@ -409,9 +409,13 @@
   }
   .sort-btn:hover { color: var(--fg); background: var(--surface-hover); }
   .sort-btn:active { transform: none; }
-  .sort-btn .arrow { font-size: 10px; opacity: .55; transition: opacity .12s; }
-  .sort-btn.active { color: var(--fg); }
-  .sort-btn.active .arrow { opacity: 1; }
+  .sort-btn .arrow { font-size: 10px; opacity: .55; transition: opacity .12s, color .12s; }
+  /* primary sort (newest click): bold black arrow */
+  .sort-btn.primary { color: var(--fg); }
+  .sort-btn.primary .arrow { opacity: 1; font-weight: 700; }
+  /* secondary sorts (tie-breakers): still directional, but greyed */
+  .sort-btn.secondary { color: var(--fg-subtle); }
+  .sort-btn.secondary .arrow { opacity: .8; }
   .ctl-hint {
     color: var(--fg-subtle);
     font-size: 12px;
