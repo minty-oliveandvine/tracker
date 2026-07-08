@@ -279,17 +279,20 @@ function dateCell(v) {
   return escapeHtml(String(v).slice(0, 10));
 }
 
-// Datetime field: show the date (same YYYY-MM-DD form as the date-only
-// columns — sliced from the string, NOT via toISOString(), which would shift
-// the naive backend timestamps into UTC and could show the wrong day), with
-// the full timestamp + relative age on hover.
+// Datetime field: show date + 24-hour time as "YYYY-MM-DD HH:MM" — both parts
+// sliced straight from the string (NOT via Date/toISOString(), which would
+// shift the naive backend timestamps into UTC and could show the wrong
+// day/time), with the full timestamp + relative age on hover.
 function datetimeCell(v) {
   if (!v) return '<span class="none">—</span>';
-  const date = String(v).slice(0, 10);
+  const s = String(v);
+  const date = s.slice(0, 10);
+  const time = s.slice(11, 16); // "HH:MM" from the "...THH:MM:SS" portion
+  const shown = time ? `${date} ${time}` : date;
   const d = new Date(v);
   const rel = isNaN(d.getTime()) ? "" : relativeTime(d);
-  const full = escapeHtml(String(v));
-  return `<span title="${full}${rel ? " · " + rel : ""}">${escapeHtml(date)}</span>`;
+  const full = escapeHtml(s);
+  return `<span title="${full}${rel ? " · " + rel : ""}">${escapeHtml(shown)}</span>`;
 }
 
 function relativeTime(d) {
