@@ -74,22 +74,20 @@
     margin-bottom: 6px;
   }
   h1 {
-    font-size: 22px;
+    font-size: 34px;
     font-weight: 600;
     letter-spacing: -0.02em;
     margin: 0;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
+    color: var(--fg-muted);
   }
   .logo {
-    width: 26px; height: 26px;
-    border-radius: 7px;
-    background: var(--accent);
-    color: var(--accent-fg);
-    display: grid; place-items: center;
-    font-size: 13px; font-weight: 700;
-    letter-spacing: -0.03em;
+    width: 60px; height: 60px;
+    border-radius: 8px;
+    object-fit: contain;
+    display: block;
   }
 
   #status {
@@ -621,7 +619,7 @@
 <body>
   <div class="wrap">
     <header>
-      <h1><span class="logo">CT</span> Client Tracker</h1>
+      <h1><img class="logo" src="/icon-logo.jpg" alt="Client Tracker logo"> Client Tracker</h1>
     </header>
     <p id="status">Loading…</p>
 
