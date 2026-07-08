@@ -45,6 +45,7 @@ async function api(path, opts = {}) {
 //   date   -> YYYY-MM-DD (or datetime); sort latest/earliest, filter before/after
 //   number -> integer; sort highest/lowest, filter >=, <=, =
 const COLUMNS = [
+  { key: "__name",                label: "Client",              type: "text"   },
   { key: "pettycash",             label: "Petty Cash",          type: "module" },
   { key: "billing",               label: "Billing",             type: "module" },
   { key: "pc_latest_submitted",   label: "Last Submitted",      type: "date"   },
@@ -66,8 +67,10 @@ let moduleFilter = { pettycash: "all", billing: "all" };
 // Range filter on one date/number column: { col, op, value }. op is
 // ">=","<=","=" for numbers; "after","before","on" for dates. Empty col = off.
 let rangeFilter = { col: "", op: "", value: "" };
-// Sort: { col, dir }. dir is "desc"/"asc" (numbers) or "latest"/"earliest" (dates).
-let sortState = { col: "", dir: "" };
+// Multi-column sort: an ordered list of { key, dir } — first entry is the
+// primary sort, the rest are tie-breakers (click order = priority). dir is
+// "asc" | "desc" for every column type (see compareBy). Defaults to clients A→Z.
+let sortKeys = [{ key: "__name", dir: "asc" }];
 
 // ---- rendering ------------------------------------------------------------
 async function load() {
@@ -152,37 +155,54 @@ function applyFiltersAndSort() {
     }
   }
 
-  // 4. Sort.
-  const sCol = COL_BY_KEY[sortState.col];
-  if (sCol && sortState.dir) {
-    const dir = sortState.dir;
-    rows.sort((a, b) => compareBy(sCol, a, b, dir));
+  // 4. Multi-column sort: apply each key in priority order; earlier keys win,
+  //    later keys break ties. Stable via a decorated index fallback.
+  const active = sortKeys.filter(s => COL_BY_KEY[s.key]);
+  if (active.length) {
+    rows = rows
+      .map((r, i) => [r, i])
+      .sort((A, B) => {
+        for (const s of active) {
+          const c = compareBy(COL_BY_KEY[s.key], A[0], B[0], s.dir);
+          if (c !== 0) return c;
+        }
+        return A[1] - B[1]; // stable tie-break on original order
+      })
+      .map(pair => pair[0]);
   }
 
   return rows;
 }
 
-// Comparator for a given column + direction. Missing dates/values sort last.
+// Comparator for a column, unified on dir = "asc" | "desc".
+// "asc" means the natural low-to-high order for the type:
+//   text   -> A→Z         number -> lowest→highest
+//   date   -> earliest→latest (blanks always last)
+//   module -> Inactive→Active
+// Missing dates always sort to the bottom regardless of direction.
 function compareBy(col, a, b, dir) {
+  const flip = dir === "desc" ? -1 : 1;
+
+  if (col.type === "text") {
+    const cmp = clientName(a).localeCompare(clientName(b), undefined, { sensitivity: "base" });
+    return flip * cmp;
+  }
   if (col.type === "module") {
-    // Active first for "on"/"desc", Inactive first otherwise.
     const av = a[col.key] ? 1 : 0, bv = b[col.key] ? 1 : 0;
-    const activeFirst = dir === "on" || dir === "desc";
-    return activeFirst ? bv - av : av - bv;
+    return flip * (av - bv); // asc: Inactive first; desc: Active first
   }
   if (col.type === "number") {
     const av = Number(a[col.key] || 0), bv = Number(b[col.key] || 0);
-    return dir === "asc" ? av - bv : bv - av; // default highest first
+    return flip * (av - bv);
   }
   // date: compare YYYY-MM-DD strings; blanks always sort to the bottom.
   const as = a[col.key] ? String(a[col.key]).slice(0, 10) : "";
   const bs = b[col.key] ? String(b[col.key]).slice(0, 10) : "";
   if (!as && !bs) return 0;
-  if (!as) return 1;
-  if (!bs) return -1;
+  if (!as) return 1;   // a is blank -> after b
+  if (!bs) return -1;  // b is blank -> after a
   if (as === bs) return 0;
-  // "latest" = newest first (descending)
-  return dir === "earliest" ? (as < bs ? -1 : 1) : (as > bs ? -1 : 1);
+  return flip * (as < bs ? -1 : 1);
 }
 
 function render() {
@@ -315,14 +335,12 @@ function opt(value, label, selected) {
   return o;
 }
 
-// Populate the range-filter and sort column dropdowns from the registry.
+// Populate the range-filter column dropdown from the registry.
 function buildControlOptions() {
   const rfCol = el("rf-col");
-  const sortCol = el("sort-col");
   for (const c of COLUMNS) {
-    // Modules filter via chips, not the range-filter dropdown.
-    if (c.type !== "module") rfCol.appendChild(opt(c.key, c.label));
-    sortCol.appendChild(opt(c.key, c.label));
+    // Range filter applies to dates & numbers only (not modules or the name).
+    if (c.type === "date" || c.type === "number") rfCol.appendChild(opt(c.key, c.label));
   }
 }
 
@@ -353,30 +371,81 @@ function syncRangeInputs() {
   }
 }
 
-// Given the chosen sort column, offer direction options in its natural wording.
-function syncSortDir() {
-  const col = COL_BY_KEY[el("sort-col").value];
-  const dirSel = el("sort-dir");
-  dirSel.innerHTML = "";
-  if (!col) { dirSel.hidden = true; return; }
-  dirSel.hidden = false;
-  if (col.type === "number") {
-    dirSel.appendChild(opt("desc", "highest → lowest"));
-    dirSel.appendChild(opt("asc", "lowest → highest"));
-  } else if (col.type === "date") {
-    dirSel.appendChild(opt("latest", "latest → earliest"));
-    dirSel.appendChild(opt("earliest", "earliest → latest"));
-  } else { // module
-    dirSel.appendChild(opt("on", "Active first"));
-    dirSel.appendChild(opt("off", "Inactive first"));
+// ---- header sort buttons --------------------------------------------------
+// Inject a clickable sort arrow next to each column title. The detail header
+// row (#head-row) has one <th> per column in the same order as COLUMNS.
+function buildSortButtons() {
+  const ths = el("head-row").querySelectorAll("th");
+  COLUMNS.forEach((col, i) => {
+    const th = ths[i];
+    if (!th) return;
+    const title = th.querySelector(".col-title");
+    if (!title) return;
+    // Wrap the existing title + a new sort button in a flex row.
+    const head = document.createElement("span");
+    head.className = "col-head";
+    title.parentNode.insertBefore(head, title);
+    head.appendChild(title);
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "sort-btn";
+    btn.dataset.key = col.key;
+    btn.title = "Sort by " + col.label;
+    btn.innerHTML = '<span class="rank" hidden></span><span class="arrow">▾</span>';
+    btn.addEventListener("click", () => cycleSort(col.key));
+    head.appendChild(btn);
+  });
+  renderSortIndicators();
+}
+
+// Cycle one column's sort: (not sorted) → desc → asc → off.
+function cycleSort(key) {
+  const idx = sortKeys.findIndex(s => s.key === key);
+  if (idx === -1) {
+    sortKeys.push({ key, dir: "desc" });            // first click: descending
+  } else if (sortKeys[idx].dir === "desc") {
+    sortKeys[idx].dir = "asc";                       // second click: ascending
+  } else {
+    sortKeys.splice(idx, 1);                          // third click: remove
   }
+  renderSortIndicators();
+  updateClearVisibility();
+  render();
+}
+
+// Reflect the current sortKeys on the header arrows: direction glyph, active
+// state, and a rank badge (1,2,3…) when more than one sort is active.
+function renderSortIndicators() {
+  const multi = sortKeys.length > 1;
+  document.querySelectorAll(".sort-btn").forEach(btn => {
+    const pos = sortKeys.findIndex(s => s.key === btn.dataset.key);
+    const arrow = btn.querySelector(".arrow");
+    const rank = btn.querySelector(".rank");
+    if (pos === -1) {
+      btn.classList.remove("active");
+      arrow.textContent = "▾";
+      rank.hidden = true;
+    } else {
+      btn.classList.add("active");
+      arrow.textContent = sortKeys[pos].dir === "asc" ? "▲" : "▼";
+      if (multi) { rank.textContent = String(pos + 1); rank.hidden = false; }
+      else rank.hidden = true;
+    }
+  });
+}
+
+// The default sort is exactly [Client asc]; anything else counts as active.
+function isDefaultSort() {
+  return sortKeys.length === 1 &&
+    sortKeys[0].key === "__name" && sortKeys[0].dir === "asc";
 }
 
 function updateClearVisibility() {
   const active = filterText.trim() !== "" ||
     moduleFilter.pettycash !== "all" || moduleFilter.billing !== "all" ||
     (rangeFilter.col && rangeFilter.op && rangeFilter.value !== "") ||
-    (sortState.col && sortState.dir);
+    !isDefaultSort();
   el("clear-controls").hidden = !active;
 }
 
@@ -426,17 +495,7 @@ function onRangeValue() {
 el("rf-val").addEventListener("input", onRangeValue);
 el("rf-date").addEventListener("input", onRangeValue);
 
-// Sort: column -> direction, then apply.
-el("sort-col").addEventListener("change", () => {
-  syncSortDir();
-  sortState = { col: el("sort-col").value, dir: el("sort-dir").hidden ? "" : el("sort-dir").value };
-  updateClearVisibility();
-  render();
-});
-el("sort-dir").addEventListener("change", () => {
-  sortState.dir = el("sort-dir").value;
-  render();
-});
+// (Sorting is driven by the ▾ arrows in the column headers — see cycleSort.)
 
 // Clear all filters + sort back to defaults.
 el("clear-controls").addEventListener("click", () => {
@@ -450,19 +509,24 @@ el("clear-controls").addEventListener("click", () => {
   rangeFilter = { col: "", op: "", value: "" };
   el("rf-col").value = ""; syncRangeInputs();
   el("rf-val").value = ""; el("rf-date").value = "";
-  sortState = { col: "", dir: "" };
-  el("sort-col").value = ""; syncSortDir();
+  // Reset sort to the default (clients A→Z), not "no sort".
+  sortKeys = [{ key: "__name", dir: "asc" }];
+  renderSortIndicators();
   updateClearVisibility();
   render();
 });
 
-// Column titles toggle their description underneath when clicked.
+// Column titles toggle their description underneath when clicked. The desc
+// lives in the <th> (closest), not necessarily as a direct sibling — the title
+// is wrapped in .col-head once sort buttons are injected.
 document.querySelectorAll(".col-title").forEach((btn) => {
   btn.addEventListener("click", () => {
-    const desc = btn.parentElement.querySelector(".col-desc");
+    const th = btn.closest("th");
+    const desc = th && th.querySelector(".col-desc");
     if (desc) desc.hidden = !desc.hidden;
   });
 });
 
 buildControlOptions();
+buildSortButtons();
 load();

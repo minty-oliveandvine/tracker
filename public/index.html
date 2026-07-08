@@ -283,9 +283,9 @@
   /* Client column: 3/4 of its former 220px, wraps long names, and stays
      pinned to the left edge during horizontal scroll. */
   th:first-child, td.name {
-    width: 165px;
-    min-width: 165px;
-    max-width: 165px;
+    width: 248px;
+    min-width: 248px;
+    max-width: 248px;
     position: sticky;
     left: 0;
     z-index: 1;
@@ -296,9 +296,9 @@
   thead tr.groups th.corner {
     position: sticky;
     left: 0;
-    width: 165px;
-    min-width: 165px;
-    max-width: 165px;
+    width: 248px;
+    min-width: 248px;
+    max-width: 248px;
     z-index: 3;
   }
   /* opaque backgrounds so scrolled cells don't bleed through the pinned column */
@@ -385,6 +385,52 @@
   }
   thead th.num .col-desc { margin-left: auto; text-align: right; }
   thead th.flag .col-desc { margin-inline: auto; text-align: center; }
+
+  /* title + sort-arrow sit on one line; JS injects .sort-btn into .col-head */
+  .col-head { display: inline-flex; align-items: center; gap: 4px; }
+  thead th.num .col-head { justify-content: flex-end; }
+  thead th.flag .col-head { justify-content: center; }
+  thead th:first-child .col-head { justify-content: center; } /* centered Client */
+  .sort-btn {
+    font: inherit;
+    font-size: 11px;
+    line-height: 1;
+    color: var(--fg-subtle);
+    background: none;
+    border: none;
+    padding: 2px;
+    margin: 0;
+    cursor: pointer;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    transition: color .12s, background .12s;
+  }
+  .sort-btn:hover { color: var(--fg); background: var(--surface-hover); }
+  .sort-btn:active { transform: none; }
+  .sort-btn .arrow { font-size: 10px; opacity: .55; transition: opacity .12s; }
+  .sort-btn.active { color: var(--fg); }
+  .sort-btn.active .arrow { opacity: 1; }
+  .sort-btn .rank {
+    font-size: 9px;
+    font-weight: 600;
+    background: var(--accent);
+    color: var(--accent-fg);
+    border-radius: 999px;
+    min-width: 13px;
+    height: 13px;
+    padding: 0 3px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .ctl-hint {
+    color: var(--fg-subtle);
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
   /* subtle vertical separators between groups on both header + body */
   th.grp-start, td.grp-start { border-left: 1px solid var(--border); }
 
@@ -503,14 +549,7 @@
         <input id="rf-date" type="date" aria-label="Filter date" hidden>
       </div>
 
-      <!-- Sort -->
-      <div class="control-group">
-        <span class="ctl-label">Sort</span>
-        <select id="sort-col" aria-label="Sort column">
-          <option value="">— none —</option>
-        </select>
-        <select id="sort-dir" aria-label="Sort direction" hidden></select>
-      </div>
+      <span class="ctl-hint">Click ▾ on a column to sort · click again to reverse · click a third time to remove</span>
 
       <button class="btn-clear" id="clear-controls" type="button" hidden>Clear all</button>
     </div>
@@ -530,7 +569,7 @@
             <th class="grp" colspan="2">Reports</th>
             <th class="grp" colspan="6">Bills</th>
           </tr>
-          <tr>
+          <tr id="head-row">
             <th>
               <button type="button" class="col-title">Client</button>
               <div class="col-desc" hidden>The client entity's name.</div>
