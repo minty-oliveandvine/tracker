@@ -84,7 +84,7 @@ function render() {
 
   const term = filterText.trim().toLowerCase();
   const rows = term
-    ? allRows.filter(r => (r.name || "").toLowerCase().includes(term))
+    ? allRows.filter(r => clientName(r).toLowerCase().includes(term))
     : allRows;
 
   if (rows.length === 0) {
@@ -99,7 +99,7 @@ function render() {
   for (const r of rows) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td class="name">${escapeHtml(r.name)}</td>
+      <td class="name">${escapeHtml(clientName(r))}</td>
       <td class="flag grp-start">${checkmark(r.pettycash)}</td>
       <td class="flag">${checkmark(r.billing)}</td>
       <td class="derived grp-start">${dateCell(r.pc_latest_submitted)}</td>
@@ -125,6 +125,14 @@ function render() {
 }
 
 // ---- cell formatters ------------------------------------------------------
+// The /api/tracker view aliases the client name column as the quoted string
+// "entities.name", so it arrives as a flat key WITH A LITERAL DOT — not a
+// nested object. It must be read with bracket notation. Fall back to a plain
+// `name` in case the backend later re-aliases it to a clean key.
+function clientName(r) {
+  return String((r && (r["entities.name"] ?? r.name)) || "");
+}
+
 function checkmark(on) {
   return on
     ? '<span class="badge badge-yes">Active</span>'
