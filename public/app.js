@@ -395,47 +395,45 @@ function buildSortButtons() {
     btn.className = "sort-btn";
     btn.dataset.key = col.key;
     btn.title = "Sort by " + col.label;
-    btn.innerHTML = '<span class="rank" hidden></span><span class="arrow">⇅</span>';
+    btn.innerHTML = '<span class="arrow">⇅</span>';
     btn.addEventListener("click", () => cycleSort(col.key));
     head.appendChild(btn);
   });
   renderSortIndicators();
 }
 
-// Cycle one column's sort: (not sorted) → desc → asc → off.
+// Sort by a single column at a time (no multi-column ranking). Clicking a
+// column's arrow cycles ITS state and clears any other sort:
+//   (not sorted) → desc → asc → off.
 function cycleSort(key) {
-  const idx = sortKeys.findIndex(s => s.key === key);
-  if (idx === -1) {
-    sortKeys.push({ key, dir: "desc" });            // first click: descending
-  } else if (sortKeys[idx].dir === "desc") {
-    sortKeys[idx].dir = "asc";                       // second click: ascending
+  const current = sortKeys.length === 1 && sortKeys[0].key === key
+    ? sortKeys[0] : null;
+  if (!current) {
+    sortKeys = [{ key, dir: "desc" }];   // first click on this column: descending
+  } else if (current.dir === "desc") {
+    sortKeys = [{ key, dir: "asc" }];    // second click: ascending
   } else {
-    sortKeys.splice(idx, 1);                          // third click: remove
+    sortKeys = [];                        // third click: no sort
   }
   renderSortIndicators();
   updateClearVisibility();
   render();
 }
 
-// Reflect the current sortKeys on the header arrows: direction glyph, active
-// state, and a rank badge (1,2,3…) when more than one sort is active.
+// Reflect the current sortKeys on the header arrows: direction glyph + active
+// state. (Multi-sort still works by click order; no rank badge is shown.)
 function renderSortIndicators() {
-  const multi = sortKeys.length > 1;
   document.querySelectorAll(".sort-btn").forEach(btn => {
     const pos = sortKeys.findIndex(s => s.key === btn.dataset.key);
     const arrow = btn.querySelector(".arrow");
-    const rank = btn.querySelector(".rank");
     if (pos === -1) {
       // Not sorted: neutral up/down glyph so it doesn't imply a direction.
       btn.classList.remove("active");
       arrow.textContent = "⇅";
-      rank.hidden = true;
     } else {
       // Active: arrow points the way the data runs — ▲ ascending, ▼ descending.
       btn.classList.add("active");
       arrow.textContent = sortKeys[pos].dir === "asc" ? "▲" : "▼";
-      if (multi) { rank.textContent = String(pos + 1); rank.hidden = false; }
-      else rank.hidden = true;
     }
   });
 }
