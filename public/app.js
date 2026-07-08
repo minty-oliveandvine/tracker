@@ -287,20 +287,35 @@ function numCell(n) {
   return v === 0 ? '<span class="zero">0</span>' : String(v);
 }
 
-// Date-only field (YYYY-MM-DD). Blank/absent -> em dash.
-function dateCell(v) {
-  if (!v) return '<span class="none">—</span>';
-  return escapeHtml(String(v).slice(0, 10));
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+// Format a "YYYY-MM-DD..." string as "DD MMM YYYY" (e.g. "01 Jan 2026),
+// parsing the parts straight from the string (no Date/UTC conversion). Returns
+// the raw input unchanged if it doesn't look like an ISO date.
+function formatDate(v) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(v));
+  if (!m) return String(v);
+  const [, y, mo, d] = m;
+  const mon = MONTHS[Number(mo) - 1] || mo;
+  return `${d} ${mon} ${y}`;
 }
 
-// Datetime field: show date + 24-hour time as "YYYY-MM-DD HH:MM" — both parts
-// sliced straight from the string (NOT via Date/toISOString(), which would
-// shift the naive backend timestamps into UTC and could show the wrong
-// day/time), with the full timestamp + relative age on hover.
+// Date-only field. Blank/absent -> em dash.
+function dateCell(v) {
+  if (!v) return '<span class="none">—</span>';
+  return escapeHtml(formatDate(v));
+}
+
+// Datetime field: show date + 24-hour time as "DD MMM YYYY HH:MM" — date
+// formatted via formatDate() and time sliced straight from the string (NOT via
+// Date/toISOString(), which would shift the naive backend timestamps into UTC
+// and could show the wrong day/time), with the full timestamp + relative age
+// on hover.
 function datetimeCell(v) {
   if (!v) return '<span class="none">—</span>';
   const s = String(v);
-  const date = s.slice(0, 10);
+  const date = formatDate(s);
   const time = s.slice(11, 16); // "HH:MM" from the "...THH:MM:SS" portion
   const shown = time ? `${date} ${time}` : date;
   const d = new Date(v);
