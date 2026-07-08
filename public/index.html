@@ -105,6 +105,95 @@
     align-items: center;
     margin-bottom: 16px;
   }
+
+  /* filter / sort chip row */
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 18px;
+    margin-bottom: 16px;
+    font-size: 13px;
+  }
+  .control-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .control-group > .ctl-label {
+    color: var(--fg-muted);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+  .chips { display: inline-flex; gap: 4px; }
+  .chip {
+    font: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border-strong);
+    background: var(--bg);
+    color: var(--fg-muted);
+    cursor: pointer;
+    transition: background .12s, border-color .12s, color .12s;
+    white-space: nowrap;
+  }
+  .chip:hover { background: var(--surface-hover); }
+  .chip[aria-pressed="true"] {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-fg);
+  }
+  .controls select {
+    font: inherit;
+    font-size: 13px;
+    color: var(--fg);
+    background: var(--bg);
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    padding: 6px 8px;
+    cursor: pointer;
+    outline: none;
+    transition: border-color .12s;
+  }
+  .controls select:focus { border-color: var(--fg-subtle); }
+  .controls input[type="number"] {
+    font: inherit;
+    font-size: 13px;
+    color: var(--fg);
+    background: var(--bg);
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    padding: 6px 8px;
+    width: 74px;
+    outline: none;
+  }
+  .controls input[type="number"]:focus { border-color: var(--fg-subtle); }
+  .controls input[type="date"] {
+    font: inherit;
+    font-size: 13px;
+    color: var(--fg);
+    background: var(--bg);
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    padding: 5px 8px;
+    outline: none;
+  }
+  .controls input[type="date"]:focus { border-color: var(--fg-subtle); }
+  .btn-clear {
+    font: inherit;
+    font-size: 12px;
+    color: var(--fg-muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 4px 2px;
+  }
+  .btn-clear:hover { color: var(--fg); background: none; }
   .search {
     position: relative;
     flex: 1;
@@ -382,6 +471,48 @@
       </label>
       <div class="spacer"></div>
       <button id="refresh">Refresh</button>
+    </div>
+
+    <div class="controls" id="controls" hidden>
+      <!-- Module filters -->
+      <div class="control-group">
+        <span class="ctl-label">Petty Cash</span>
+        <span class="chips" id="filter-pettycash" role="group" aria-label="Filter by Petty Cash">
+          <button class="chip" type="button" data-val="all" aria-pressed="true">All</button>
+          <button class="chip" type="button" data-val="on">Active</button>
+          <button class="chip" type="button" data-val="off">Inactive</button>
+        </span>
+      </div>
+      <div class="control-group">
+        <span class="ctl-label">Billing</span>
+        <span class="chips" id="filter-billing" role="group" aria-label="Filter by Billing">
+          <button class="chip" type="button" data-val="all" aria-pressed="true">All</button>
+          <button class="chip" type="button" data-val="on">Active</button>
+          <button class="chip" type="button" data-val="off">Inactive</button>
+        </span>
+      </div>
+
+      <!-- Range filter (dates & numbers) -->
+      <div class="control-group">
+        <span class="ctl-label">Filter</span>
+        <select id="rf-col" aria-label="Filter column">
+          <option value="">— none —</option>
+        </select>
+        <select id="rf-op" aria-label="Filter comparison" hidden></select>
+        <input id="rf-val" type="number" placeholder="value" aria-label="Filter value" hidden>
+        <input id="rf-date" type="date" aria-label="Filter date" hidden>
+      </div>
+
+      <!-- Sort -->
+      <div class="control-group">
+        <span class="ctl-label">Sort</span>
+        <select id="sort-col" aria-label="Sort column">
+          <option value="">— none —</option>
+        </select>
+        <select id="sort-dir" aria-label="Sort direction" hidden></select>
+      </div>
+
+      <button class="btn-clear" id="clear-controls" type="button" hidden>Clear all</button>
     </div>
 
     <div class="card">
