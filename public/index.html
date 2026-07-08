@@ -154,12 +154,15 @@
     background: var(--bg);
     border: 1px solid var(--border-strong);
     border-radius: 8px;
-    padding: 6px 8px;
+    padding: 5px 8px;
     cursor: pointer;
     outline: none;
-    transition: border-color .12s;
+    transition: border-color .12s, background .12s;
   }
+  .controls select:hover { background: var(--surface-hover); }
   .controls select:focus { border-color: var(--fg-subtle); }
+  /* the Filter column select matches the Clients trigger width */
+  #rf-col { min-width: 160px; }
   .controls input[type="number"] {
     font: inherit;
     font-size: 13px;
@@ -214,7 +217,8 @@
     text-align: left;
   }
   .ms-trigger:hover { background: var(--surface-hover); }
-  .ms-chips { display: inline-flex; flex-wrap: wrap; gap: 4px; flex: 1; min-width: 0; }
+  .ms-chips { display: inline-flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
+  .ms-chips:not(:empty) + .ms-placeholder { display: none; }
   .ms-chip {
     display: inline-flex;
     align-items: center;
@@ -236,8 +240,9 @@
     cursor: pointer;
   }
   .ms-chip .x:hover { background: var(--surface-hover); color: var(--fg); }
-  .ms-placeholder { color: var(--fg-subtle); flex: 1; }
-  .ms-caret { color: var(--fg-subtle); font-size: 11px; margin-left: auto; }
+  .ms-placeholder { color: var(--fg-subtle); text-align: left; }
+  /* caret always pinned to the right; content (chips or placeholder) stays left */
+  .ms-caret { color: var(--fg-subtle); font-size: 15px; line-height: 1; margin-left: auto; }
 
   .ms-panel {
     position: absolute;
