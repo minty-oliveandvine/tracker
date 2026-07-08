@@ -150,15 +150,17 @@ function dateCell(v) {
   return escapeHtml(String(v).slice(0, 10));
 }
 
-// Datetime field: show the date, with the full timestamp + relative age on hover.
+// Datetime field: show the date (same YYYY-MM-DD form as the date-only
+// columns — sliced from the string, NOT via toISOString(), which would shift
+// the naive backend timestamps into UTC and could show the wrong day), with
+// the full timestamp + relative age on hover.
 function datetimeCell(v) {
   if (!v) return '<span class="none">—</span>';
+  const date = String(v).slice(0, 10);
   const d = new Date(v);
-  if (isNaN(d.getTime())) return escapeHtml(String(v));
-  const date = d.toISOString().slice(0, 10);
-  const rel = relativeTime(d);
+  const rel = isNaN(d.getTime()) ? "" : relativeTime(d);
   const full = escapeHtml(String(v));
-  return `<span title="${full}${rel ? " · " + rel : ""}">${date}</span>`;
+  return `<span title="${full}${rel ? " · " + rel : ""}">${escapeHtml(date)}</span>`;
 }
 
 function relativeTime(d) {

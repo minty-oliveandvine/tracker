@@ -190,13 +190,40 @@
   tbody tr:last-child td { border-bottom: none; }
   tbody tr { transition: background .1s; }
   tbody tr:hover td { background: var(--surface); }
-  td.name { font-weight: 500; white-space: nowrap; }
-  th:first-child, td.name { min-width: 220px; }
+  td.name { font-weight: 500; white-space: normal; word-break: break-word; }
+  /* Client column: 3/4 of its former 220px, wraps long names, and stays
+     pinned to the left edge during horizontal scroll. */
+  th:first-child, td.name {
+    width: 165px;
+    min-width: 165px;
+    max-width: 165px;
+    position: sticky;
+    left: 0;
+    z-index: 1;
+  }
+  th:first-child { text-align: center; z-index: 3; }
+  /* the empty group-row cell above "Client" must pin too, or the Modules
+     group header slides under the frozen column on horizontal scroll */
+  thead tr.groups th.corner {
+    position: sticky;
+    left: 0;
+    width: 165px;
+    min-width: 165px;
+    max-width: 165px;
+    z-index: 3;
+  }
+  /* opaque backgrounds so scrolled cells don't bleed through the pinned column */
+  td.name { background: var(--bg); }
+  tbody tr:hover td.name { background: var(--surface); }
+  /* right edge on the pinned column to separate it from scrolling content */
+  th:first-child, td.name, thead tr.groups th.corner {
+    border-right: 1px solid var(--border);
+  }
   td.derived {
     color: var(--fg-muted);
-    font-family: var(--mono);
+    font-family: var(--font);
     font-variant-numeric: tabular-nums;
-    font-size: 13px;
+    font-size: 14px;
     white-space: nowrap;
   }
   td.num {
@@ -367,7 +394,7 @@
       <table>
         <thead>
           <tr class="groups">
-            <th></th>
+            <th class="corner"></th>
             <th class="grp" colspan="2">Modules</th>
             <th class="grp" colspan="2">Reports</th>
             <th class="grp" colspan="6">Bills</th>
