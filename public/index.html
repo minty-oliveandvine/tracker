@@ -693,7 +693,7 @@
           <tr class="groups">
             <th class="corner"></th>
             <th class="grp" colspan="2">Modules</th>
-            <th class="grp" colspan="2">Reports</th>
+            <th class="grp" colspan="3">Reports</th>
             <th class="grp" colspan="6">Bills</th>
           </tr>
           <tr id="head-row">
@@ -712,6 +712,10 @@
             <th class="grp-start">
               <button type="button" class="col-title">Last Submitted</button>
               <div class="col-desc" hidden>Date of the client's most recent petty-cash report, submitted or not.</div>
+            </th>
+            <th>
+              <button type="button" class="col-title">Last Submission Time</button>
+              <div class="col-desc" hidden>Timestamp of when the latest report was submitted (the report period is shown by Last Submitted).</div>
             </th>
             <th>
               <button type="button" class="col-title">Last Published</button>
@@ -738,8 +742,8 @@
               <div class="col-desc" hidden>Timestamp a bill was most recently published for this client.</div>
             </th>
             <th>
-              <button type="button" class="col-title">Last Bill Activity</button>
-              <div class="col-desc" hidden>Timestamp of the most recent bill create/update.</div>
+              <button type="button" class="col-title">Last Bill Created</button>
+              <div class="col-desc" hidden>Timestamp of the most recent bill created.</div>
             </th>
           </tr>
         </thead>

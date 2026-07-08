@@ -49,13 +49,14 @@ const COLUMNS = [
   { key: "pettycash",             label: "Petty Cash",          type: "module" },
   { key: "billing",               label: "Billing",             type: "module" },
   { key: "pc_latest_submitted",   label: "Last Submitted",      type: "date"   },
+  { key: "pc_latest_submitted_date", label: "Last Submission Time", type: "date" },
   { key: "pc_latest_published",   label: "Last Published",      type: "date"   },
   { key: "num_paid",              label: "Paid",                type: "number" },
   { key: "num_partialpaid",       label: "Partially Paid",      type: "number" },
   { key: "num_unpaid",            label: "Unpaid",              type: "number" },
   { key: "num_published",         label: "Published Bills",     type: "number" },
   { key: "latest_bill_published", label: "Last Bill Published", type: "date"   },
-  { key: "latest_bill_update",    label: "Last Bill Activity",  type: "date"   },
+  { key: "latest_bill_update",    label: "Last Bill Created",   type: "date"   },
 ];
 const COL_BY_KEY = Object.fromEntries(COLUMNS.map(c => [c.key, c]));
 
@@ -236,6 +237,7 @@ function render() {
       <td class="flag grp-start">${checkmark(r.pettycash)}</td>
       <td class="flag">${checkmark(r.billing)}</td>
       <td class="derived grp-start">${dateCell(r.pc_latest_submitted)}</td>
+      <td class="derived">${datetimeCell(r.pc_latest_submitted_date)}</td>
       <td class="derived">${dateCell(r.pc_latest_published)}</td>
       <td class="num grp-start">${numCell(r.num_paid)}</td>
       <td class="num">${numCell(r.num_partialpaid)}</td>
