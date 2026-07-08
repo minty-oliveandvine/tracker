@@ -167,6 +167,7 @@
   table {
     border-collapse: collapse;
     width: 100%;
+    min-width: 900px;
     font-size: 14px;
   }
   thead th {
@@ -189,7 +190,8 @@
   tbody tr:last-child td { border-bottom: none; }
   tbody tr { transition: background .1s; }
   tbody tr:hover td { background: var(--surface); }
-  td.name { font-weight: 500; }
+  td.name { font-weight: 500; white-space: nowrap; }
+  th:first-child, td.name { min-width: 220px; }
   td.derived {
     color: var(--fg-muted);
     font-family: var(--mono);
@@ -198,9 +200,9 @@
     white-space: nowrap;
   }
   td.num {
-    font-family: var(--mono);
+    font-family: var(--font);
     font-variant-numeric: tabular-nums;
-    font-size: 13px;
+    font-size: 14px;
     text-align: right;
   }
   td.num .zero { color: var(--fg-subtle); }

@@ -127,8 +127,8 @@ function render() {
 // ---- cell formatters ------------------------------------------------------
 function checkmark(on) {
   return on
-    ? '<span class="check check-yes" title="Enabled">✅</span>'
-    : '<span class="check check-no" title="Disabled">❌</span>';
+    ? '<span class="badge badge-yes">Active</span>'
+    : '<span class="badge badge-no">Inactive</span>';
 }
 
 function numCell(n) {
