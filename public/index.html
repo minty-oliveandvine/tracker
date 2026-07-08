@@ -194,6 +194,96 @@
     padding: 4px 2px;
   }
   .btn-clear:hover { color: var(--fg); background: none; }
+
+  /* client multi-select dropdown */
+  .multiselect { position: relative; display: inline-block; }
+  .ms-trigger {
+    font: inherit;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 160px;
+    max-width: 340px;
+    padding: 5px 8px;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--fg);
+    cursor: pointer;
+    text-align: left;
+  }
+  .ms-trigger:hover { background: var(--surface-hover); }
+  .ms-chips { display: inline-flex; flex-wrap: wrap; gap: 4px; flex: 1; min-width: 0; }
+  .ms-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 1px 4px 1px 8px;
+    max-width: 140px;
+  }
+  .ms-chip .lbl {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .ms-chip .x {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 15px; height: 15px; border-radius: 50%;
+    color: var(--fg-muted); font-size: 12px; line-height: 1;
+    cursor: pointer;
+  }
+  .ms-chip .x:hover { background: var(--surface-hover); color: var(--fg); }
+  .ms-placeholder { color: var(--fg-subtle); flex: 1; }
+  .ms-caret { color: var(--fg-subtle); font-size: 11px; margin-left: auto; }
+
+  .ms-panel {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 4px);
+    left: 0;
+    width: 260px;
+    max-width: 80vw;
+    background: var(--bg);
+    border: 1px solid var(--border-strong);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    padding: 8px;
+  }
+  .ms-search input {
+    width: 100%;
+    font: inherit; font-size: 13px;
+    color: var(--fg); background: var(--bg);
+    border: 1px solid var(--border-strong);
+    border-radius: 7px;
+    padding: 6px 9px;
+    outline: none;
+  }
+  .ms-search input:focus { border-color: var(--fg-subtle); }
+  .ms-actions {
+    display: flex; gap: 12px;
+    padding: 6px 2px 4px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 4px;
+  }
+  .ms-link {
+    font: inherit; font-size: 12px;
+    color: var(--green); background: none; border: none;
+    cursor: pointer; padding: 2px; text-decoration: none;
+  }
+  .ms-link:hover { text-decoration: underline; background: none; }
+  .ms-list { max-height: 240px; overflow-y: auto; }
+  .ms-option {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 6px; border-radius: 6px;
+    font-size: 13px; cursor: pointer;
+  }
+  .ms-option:hover { background: var(--surface); }
+  .ms-option input { cursor: pointer; margin: 0; }
+  .ms-option .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ms-empty { padding: 10px 6px; color: var(--fg-subtle); font-size: 12px; }
   .search {
     position: relative;
     flex: 1;
@@ -511,6 +601,30 @@
     </div>
 
     <div class="controls" id="controls" hidden>
+      <!-- Client multi-select -->
+      <div class="control-group">
+        <span class="ctl-label">Clients</span>
+        <div class="multiselect" id="client-ms">
+          <button class="ms-trigger" id="client-ms-trigger" type="button"
+                  aria-haspopup="listbox" aria-expanded="false">
+            <span class="ms-chips" id="client-ms-chips"></span>
+            <span class="ms-placeholder" id="client-ms-placeholder">All clients</span>
+            <span class="ms-caret">▾</span>
+          </button>
+          <div class="ms-panel" id="client-ms-panel" hidden role="listbox" aria-multiselectable="true">
+            <div class="ms-search">
+              <input type="search" id="client-ms-search" placeholder="Search clients…"
+                     autocomplete="off" spellcheck="false">
+            </div>
+            <div class="ms-actions">
+              <button class="ms-link" id="client-ms-all" type="button">Select all</button>
+              <button class="ms-link" id="client-ms-none" type="button">Clear</button>
+            </div>
+            <div class="ms-list" id="client-ms-list"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- Module filters -->
       <div class="control-group">
         <span class="ctl-label">Petty Cash</span>

@@ -62,6 +62,8 @@ const COL_BY_KEY = Object.fromEntries(COLUMNS.map(c => [c.key, c]));
 // ---- state ----------------------------------------------------------------
 let allRows = [];
 let filterText = "";
+// Client multi-select: set of chosen client names. Empty = show all.
+let selectedClients = new Set();
 // Module filter: "all" | "on" | "off" per module column.
 let moduleFilter = { pettycash: "all", billing: "all" };
 // Range filter on one date/number column: { col, op, value }. op is
@@ -105,6 +107,13 @@ async function load() {
 
   el("toolbar").hidden = false;
   el("controls").hidden = false;
+  // Drop any selected clients that no longer exist in the refreshed data.
+  if (selectedClients.size) {
+    const present = new Set(clientNameList());
+    for (const n of [...selectedClients]) if (!present.has(n)) selectedClients.delete(n);
+  }
+  renderClientTrigger();
+  renderClientOptions();
   setLoading(false);
   render();
 }
@@ -113,6 +122,11 @@ async function load() {
 // of the current state + allRows — returns the rows to render.
 function applyFiltersAndSort() {
   let rows = allRows.slice();
+
+  // 0. Client multi-select: if any clients are chosen, show only those.
+  if (selectedClients.size) {
+    rows = rows.filter(r => selectedClients.has(clientName(r)));
+  }
 
   // 1. Client-name search.
   const term = filterText.trim().toLowerCase();
@@ -210,7 +224,7 @@ function render() {
   tbody.innerHTML = "";
 
   const rows = applyFiltersAndSort();
-  const anyFilterActive = filterText.trim() !== "" ||
+  const anyFilterActive = selectedClients.size > 0 || filterText.trim() !== "" ||
     moduleFilter.pettycash !== "all" || moduleFilter.billing !== "all" ||
     (rangeFilter.col && rangeFilter.op && rangeFilter.value !== "");
 
@@ -347,6 +361,103 @@ function buildControlOptions() {
   }
 }
 
+// ---- client multi-select --------------------------------------------------
+// Sorted, de-duplicated list of client names present in the data.
+function clientNameList() {
+  const names = new Set();
+  for (const r of allRows) {
+    const n = clientName(r);
+    if (n) names.add(n);
+  }
+  return [...names].sort((a, b) =>
+    a.localeCompare(b, undefined, { sensitivity: "base" }));
+}
+
+// (Re)build the checkbox option list, honouring the search box; then refresh
+// the trigger (chips / placeholder). Called after load and on search input.
+function renderClientOptions() {
+  const listEl = el("client-ms-list");
+  const term = el("client-ms-search").value.trim().toLowerCase();
+  listEl.innerHTML = "";
+  const names = clientNameList()
+    .filter(n => !term || n.toLowerCase().includes(term));
+
+  if (names.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "ms-empty";
+    empty.textContent = term ? "No matching clients." : "No clients.";
+    listEl.appendChild(empty);
+  }
+  for (const name of names) {
+    const label = document.createElement("label");
+    label.className = "ms-option";
+    label.setAttribute("role", "option");
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = selectedClients.has(name);
+    cb.addEventListener("change", () => {
+      if (cb.checked) selectedClients.add(name);
+      else selectedClients.delete(name);
+      renderClientTrigger();
+      updateClearVisibility();
+      render();
+    });
+    const span = document.createElement("span");
+    span.className = "name";
+    span.textContent = name;
+    label.appendChild(cb);
+    label.appendChild(span);
+    listEl.appendChild(label);
+  }
+}
+
+// Trigger button: show removable chips for chosen clients, else a placeholder.
+function renderClientTrigger() {
+  const chipsEl = el("client-ms-chips");
+  const placeholder = el("client-ms-placeholder");
+  chipsEl.innerHTML = "";
+  const chosen = [...selectedClients];
+  if (chosen.length === 0) {
+    placeholder.hidden = false;
+    return;
+  }
+  placeholder.hidden = true;
+  // Show up to a few chips inline; summarise the rest to avoid overflow.
+  const MAX = 3;
+  chosen.slice(0, MAX).forEach(name => {
+    const chip = document.createElement("span");
+    chip.className = "ms-chip";
+    chip.innerHTML = `<span class="lbl"></span><span class="x" title="Remove">×</span>`;
+    chip.querySelector(".lbl").textContent = name;
+    chip.querySelector(".x").addEventListener("click", (e) => {
+      e.stopPropagation(); // don't toggle the dropdown open
+      selectedClients.delete(name);
+      renderClientTrigger();
+      renderClientOptions();
+      updateClearVisibility();
+      render();
+    });
+    chipsEl.appendChild(chip);
+  });
+  if (chosen.length > MAX) {
+    const more = document.createElement("span");
+    more.className = "ms-chip";
+    more.innerHTML = `<span class="lbl">+${chosen.length - MAX} more</span>`;
+    chipsEl.appendChild(more);
+  }
+}
+
+function openClientPanel(open) {
+  const panel = el("client-ms-panel");
+  const trigger = el("client-ms-trigger");
+  panel.hidden = !open;
+  trigger.setAttribute("aria-expanded", String(open));
+  if (open) {
+    renderClientOptions();
+    el("client-ms-search").focus();
+  }
+}
+
 // Given the chosen range-filter column, show the right operator + input.
 function syncRangeInputs() {
   const col = COL_BY_KEY[el("rf-col").value];
@@ -447,7 +558,7 @@ function isDefaultSort() {
 }
 
 function updateClearVisibility() {
-  const active = filterText.trim() !== "" ||
+  const active = selectedClients.size > 0 || filterText.trim() !== "" ||
     moduleFilter.pettycash !== "all" || moduleFilter.billing !== "all" ||
     (rangeFilter.col && rangeFilter.op && rangeFilter.value !== "") ||
     !isDefaultSort();
@@ -461,6 +572,38 @@ el("search").addEventListener("input", (e) => {
   render();
 });
 el("refresh").addEventListener("click", load);
+
+// Client multi-select dropdown.
+el("client-ms-trigger").addEventListener("click", () => {
+  const isOpen = el("client-ms-trigger").getAttribute("aria-expanded") === "true";
+  openClientPanel(!isOpen);
+});
+el("client-ms-search").addEventListener("input", renderClientOptions);
+el("client-ms-all").addEventListener("click", () => {
+  // Select all clients currently matching the search filter.
+  const term = el("client-ms-search").value.trim().toLowerCase();
+  clientNameList()
+    .filter(n => !term || n.toLowerCase().includes(term))
+    .forEach(n => selectedClients.add(n));
+  renderClientOptions();
+  renderClientTrigger();
+  updateClearVisibility();
+  render();
+});
+el("client-ms-none").addEventListener("click", () => {
+  selectedClients.clear();
+  renderClientOptions();
+  renderClientTrigger();
+  updateClearVisibility();
+  render();
+});
+// Close the panel when clicking outside it.
+document.addEventListener("click", (e) => {
+  if (!el("client-ms").contains(e.target)) openClientPanel(false);
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") openClientPanel(false);
+});
 
 // Module filter chips (Petty Cash, Billing): single-select within each group.
 for (const key of ["pettycash", "billing"]) {
@@ -506,6 +649,10 @@ el("rf-date").addEventListener("input", onRangeValue);
 el("clear-controls").addEventListener("click", () => {
   filterText = "";
   el("search").value = "";
+  selectedClients.clear();
+  el("client-ms-search").value = "";
+  renderClientTrigger();
+  renderClientOptions();
   moduleFilter = { pettycash: "all", billing: "all" };
   for (const key of ["pettycash", "billing"]) {
     el("filter-" + key).querySelectorAll(".chip").forEach(c =>
