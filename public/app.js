@@ -395,7 +395,7 @@ function buildSortButtons() {
     btn.className = "sort-btn";
     btn.dataset.key = col.key;
     btn.title = "Sort by " + col.label;
-    btn.innerHTML = '<span class="rank" hidden></span><span class="arrow">▾</span>';
+    btn.innerHTML = '<span class="rank" hidden></span><span class="arrow">⇅</span>';
     btn.addEventListener("click", () => cycleSort(col.key));
     head.appendChild(btn);
   });
@@ -426,10 +426,12 @@ function renderSortIndicators() {
     const arrow = btn.querySelector(".arrow");
     const rank = btn.querySelector(".rank");
     if (pos === -1) {
+      // Not sorted: neutral up/down glyph so it doesn't imply a direction.
       btn.classList.remove("active");
-      arrow.textContent = "▾";
+      arrow.textContent = "⇅";
       rank.hidden = true;
     } else {
+      // Active: arrow points the way the data runs — ▲ ascending, ▼ descending.
       btn.classList.add("active");
       arrow.textContent = sortKeys[pos].dir === "asc" ? "▲" : "▼";
       if (multi) { rank.textContent = String(pos + 1); rank.hidden = false; }
