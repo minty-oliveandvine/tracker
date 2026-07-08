@@ -152,18 +152,28 @@
     font: inherit;
     font-size: 13px;
     color: var(--fg);
-    background: var(--bg);
+    /* strip the native OS caret and draw our own ▾ so the Filter dropdowns
+       look identical to the Clients trigger */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-color: var(--bg);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath d='M2 4l3 3 3-3' fill='none' stroke='%238f8f8f' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
     border: 1px solid var(--border-strong);
     border-radius: 8px;
-    padding: 5px 8px;
+    padding: 5px 26px 5px 8px;
     cursor: pointer;
     outline: none;
-    transition: border-color .12s, background .12s;
+    transition: border-color .12s, background-color .12s;
   }
-  .controls select:hover { background: var(--surface-hover); }
+  .controls select:hover { background-color: var(--surface-hover); }
   .controls select:focus { border-color: var(--fg-subtle); }
   /* the Filter column select matches the Clients trigger width */
   #rf-col { min-width: 160px; }
+  /* match the Clients trigger's focus highlight for full parity */
+  .ms-trigger:focus-visible { border-color: var(--fg-subtle); outline: none; }
   .controls input[type="number"] {
     font: inherit;
     font-size: 13px;
