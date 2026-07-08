@@ -438,8 +438,10 @@
     font-variant-numeric: tabular-nums;
     font-size: 14px;
     text-align: right;
-    color: var(--fg-subtle);
+    color: var(--fg-muted);
   }
+  /* zeros stay the fainter grey */
+  td.num .zero { color: var(--fg-subtle); }
   td.flag { text-align: center; }
   .none { color: var(--fg-subtle); }
 
