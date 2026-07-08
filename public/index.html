@@ -127,6 +127,7 @@
     letter-spacing: 0.02em;
     white-space: nowrap;
   }
+  .rf-lead { color: var(--fg-subtle); font-size: 13px; }
   .chips { display: inline-flex; gap: 4px; }
   .chip {
     font: inherit;
@@ -637,29 +638,12 @@
         </div>
       </div>
 
-      <!-- Module filters -->
-      <div class="control-group">
-        <span class="ctl-label">Petty Cash</span>
-        <span class="chips" id="filter-pettycash" role="group" aria-label="Filter by Petty Cash">
-          <button class="chip" type="button" data-val="all" aria-pressed="true">All</button>
-          <button class="chip" type="button" data-val="on">Active</button>
-          <button class="chip" type="button" data-val="off">Inactive</button>
-        </span>
-      </div>
-      <div class="control-group">
-        <span class="ctl-label">Billing</span>
-        <span class="chips" id="filter-billing" role="group" aria-label="Filter by Billing">
-          <button class="chip" type="button" data-val="all" aria-pressed="true">All</button>
-          <button class="chip" type="button" data-val="on">Active</button>
-          <button class="chip" type="button" data-val="off">Inactive</button>
-        </span>
-      </div>
-
       <!-- Range filter (dates & numbers) -->
-      <div class="control-group">
+      <div class="control-group rf-group">
         <span class="ctl-label">Filter</span>
-        <select id="rf-col" aria-label="Filter column">
-          <option value="">— none —</option>
+        <span class="rf-lead">where</span>
+        <select id="rf-col" aria-label="Field to filter by">
+          <option value="">choose a field…</option>
         </select>
         <select id="rf-op" aria-label="Filter comparison" hidden></select>
         <input id="rf-val" type="number" placeholder="value" aria-label="Filter value" hidden>

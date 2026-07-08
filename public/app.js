@@ -64,8 +64,6 @@ let allRows = [];
 let filterText = "";
 // Client multi-select: set of chosen client names. Empty = show all.
 let selectedClients = new Set();
-// Module filter: "all" | "on" | "off" per module column.
-let moduleFilter = { pettycash: "all", billing: "all" };
 // Range filter on one date/number column: { col, op, value }. op is
 // ">=","<=","=" for numbers; "after","before","on" for dates. Empty col = off.
 let rangeFilter = { col: "", op: "", value: "" };
@@ -132,14 +130,7 @@ function applyFiltersAndSort() {
   const term = filterText.trim().toLowerCase();
   if (term) rows = rows.filter(r => clientName(r).toLowerCase().includes(term));
 
-  // 2. Module filters (Active/Inactive).
-  for (const key of ["pettycash", "billing"]) {
-    const sel = moduleFilter[key];
-    if (sel === "on") rows = rows.filter(r => !!r[key]);
-    else if (sel === "off") rows = rows.filter(r => !r[key]);
-  }
-
-  // 3. Range filter on one date/number column.
+  // 2. Range filter on one date/number column.
   const rf = rangeFilter;
   const rfCol = COL_BY_KEY[rf.col];
   if (rfCol && rf.op && rf.value !== "" && rf.value != null) {
@@ -225,7 +216,6 @@ function render() {
 
   const rows = applyFiltersAndSort();
   const anyFilterActive = selectedClients.size > 0 || filterText.trim() !== "" ||
-    moduleFilter.pettycash !== "all" || moduleFilter.billing !== "all" ||
     (rangeFilter.col && rangeFilter.op && rangeFilter.value !== "");
 
   if (rows.length === 0) {
@@ -370,9 +360,18 @@ function opt(value, label, selected) {
 // Populate the range-filter column dropdown from the registry.
 function buildControlOptions() {
   const rfCol = el("rf-col");
-  for (const c of COLUMNS) {
-    // Range filter applies to dates & numbers only (not modules or the name).
-    if (c.type === "date" || c.type === "number") rfCol.appendChild(opt(c.key, c.label));
+  // Group the filterable fields so it's clear which are dates vs numbers.
+  const groups = [
+    { label: "Dates", type: "date" },
+    { label: "Numbers", type: "number" },
+  ];
+  for (const g of groups) {
+    const og = document.createElement("optgroup");
+    og.label = g.label;
+    for (const c of COLUMNS) {
+      if (c.type === g.type) og.appendChild(opt(c.key, c.label));
+    }
+    if (og.children.length) rfCol.appendChild(og);
   }
 }
 
@@ -486,15 +485,15 @@ function syncRangeInputs() {
   }
   opSel.hidden = false;
   if (col.type === "number") {
-    opSel.appendChild(opt(">=", "≥"));
-    opSel.appendChild(opt("<=", "≤"));
-    opSel.appendChild(opt("=", "="));
+    opSel.appendChild(opt(">=", "is at least"));
+    opSel.appendChild(opt("<=", "is at most"));
+    opSel.appendChild(opt("=", "equals"));
     numIn.hidden = false;
     dateIn.hidden = true;
   } else { // date
-    opSel.appendChild(opt("after", "after"));
-    opSel.appendChild(opt("before", "before"));
-    opSel.appendChild(opt("on", "on"));
+    opSel.appendChild(opt("after", "is after"));
+    opSel.appendChild(opt("before", "is before"));
+    opSel.appendChild(opt("on", "is on"));
     numIn.hidden = true;
     dateIn.hidden = false;
   }
@@ -535,15 +534,15 @@ function buildSortButtons() {
 const ARROW_SVG = {
   // faint UP-over-DOWN chevron for the unsorted/neutral state — points both
   // ways so it reads as "sortable", never mistaken for the down (desc) arrow.
-  neutral: '<svg viewBox="0 0 10 10" width="9" height="9" aria-hidden="true">'
-    + '<path d="M2.5 4.2L5 1.7 7.5 4.2" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>'
-    + '<path d="M2.5 5.8L5 8.3 7.5 5.8" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  neutral: '<svg viewBox="0 0 10 10" width="13" height="13" aria-hidden="true">'
+    + '<path d="M2.5 4.2L5 1.7 7.5 4.2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>'
+    + '<path d="M2.5 5.8L5 8.3 7.5 5.8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   // solid up triangle — ascending
-  up: '<svg viewBox="0 0 10 10" width="9" height="9" aria-hidden="true">'
-    + '<path d="M5 2L8.5 8H1.5Z" fill="currentColor"/></svg>',
+  up: '<svg viewBox="0 0 10 10" width="13" height="13" aria-hidden="true">'
+    + '<path d="M5 2.5L8 7.5H2Z" fill="currentColor"/></svg>',
   // solid down triangle — descending
-  down: '<svg viewBox="0 0 10 10" width="9" height="9" aria-hidden="true">'
-    + '<path d="M5 8L1.5 2H8.5Z" fill="currentColor"/></svg>',
+  down: '<svg viewBox="0 0 10 10" width="13" height="13" aria-hidden="true">'
+    + '<path d="M5 7.5L2 2.5H8Z" fill="currentColor"/></svg>',
 };
 
 // Multi-column sort. Clicking a column cycles ITS state — desc → asc → off —
@@ -593,7 +592,6 @@ function isDefaultSort() {
 
 function updateClearVisibility() {
   const active = selectedClients.size > 0 || filterText.trim() !== "" ||
-    moduleFilter.pettycash !== "all" || moduleFilter.billing !== "all" ||
     (rangeFilter.col && rangeFilter.op && rangeFilter.value !== "") ||
     !isDefaultSort();
   el("clear-controls").hidden = !active;
@@ -639,20 +637,6 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") openClientPanel(false);
 });
 
-// Module filter chips (Petty Cash, Billing): single-select within each group.
-for (const key of ["pettycash", "billing"]) {
-  const group = el("filter-" + key);
-  group.addEventListener("click", (e) => {
-    const chip = e.target.closest(".chip");
-    if (!chip) return;
-    moduleFilter[key] = chip.dataset.val;
-    group.querySelectorAll(".chip").forEach(c =>
-      c.setAttribute("aria-pressed", String(c === chip)));
-    updateClearVisibility();
-    render();
-  });
-}
-
 // Range filter: column -> operator/value, then apply on any change.
 el("rf-col").addEventListener("change", () => {
   syncRangeInputs();
@@ -687,11 +671,6 @@ el("clear-controls").addEventListener("click", () => {
   el("client-ms-search").value = "";
   renderClientTrigger();
   renderClientOptions();
-  moduleFilter = { pettycash: "all", billing: "all" };
-  for (const key of ["pettycash", "billing"]) {
-    el("filter-" + key).querySelectorAll(".chip").forEach(c =>
-      c.setAttribute("aria-pressed", String(c.dataset.val === "all")));
-  }
   rangeFilter = { col: "", op: "", value: "" };
   el("rf-col").value = ""; syncRangeInputs();
   el("rf-val").value = ""; el("rf-date").value = "";
