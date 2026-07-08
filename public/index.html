@@ -17,12 +17,19 @@
     --border-strong: #e0e0e0;
     --surface: #fafafa;
     --surface-hover: #f5f5f5;
-    --accent: #171717;
-    --accent-fg: #ffffff;
-    --green: #0070f3;
-    --green-bg: #e8f0fe;
-    --success: #0f7b2e;
-    --success-bg: #e6f4ea;
+    /* light mint accent — sampled from the logo's clipboard paper */
+    --mint: #B8E0CE;             /* the pale mint of the paper */
+    --mint-deep: #4A9B7F;        /* the logo's darker mint (text/checkmarks) */
+    --accent: #B8E0CE;           /* soft mint for chips / selected states */
+    --accent-fg: #1f3d33;        /* dark mint-green text on mint fills — readable */
+    --accent-hover: #a6d6c0;
+    --accent-soft: #eef8f3;      /* faintest mint wash for hovers */
+    --header-bg: #dcefe7;        /* pastel mint for the detail header row */
+    --header-bg-top: #d3e8df;    /* slightly greyer/darker mint for the group row */
+    --green: #4A9B7F;            /* focus rings / links — the deeper mint */
+    --green-bg: #eef8f3;
+    --success: #4A9B7F;          /* Active badges */
+    --success-bg: #eaf6f0;
     --danger: #c11574;
     --danger-fg: #b91c1c;
     --shadow: 0 1px 2px rgba(0,0,0,.04), 0 1px 3px rgba(0,0,0,.04);
@@ -42,12 +49,17 @@
       --border-strong: #2e2e2e;
       --surface: #141414;
       --surface-hover: #1a1a1a;
-      --accent: #ededed;
-      --accent-fg: #0a0a0a;
-      --green: #3291ff;
-      --green-bg: #10233f;
-      --success: #5ad07f;
-      --success-bg: #10251a;
+      /* teal accent — brighter for dark mode legibility */
+      --accent: #4CA392;
+      --accent-fg: #05130f;
+      --accent-hover: #5cb3a2;
+      --accent-soft: #10251f;
+      --header-bg: #16302a;        /* pastel mint header, dark-mode variant */
+      --header-bg-top: #1d3b34;    /* slightly lighter group row in dark mode */
+      --green: #4CA392;
+      --green-bg: #10251f;
+      --success: #5cc4ac;
+      --success-bg: #10251f;
       --danger: #ff6ab8;
       --danger-fg: #f87171;
       --shadow: 0 1px 2px rgba(0,0,0,.4);
@@ -83,7 +95,8 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    color: var(--fg-muted);
+    /* muted teal-grey */
+    color: #6E9088;
   }
   .logo {
     width: 60px; height: 60px;
@@ -358,11 +371,12 @@
   button:hover { background: var(--surface-hover); }
   button:active { transform: translateY(0.5px); }
   button.primary {
-    background: var(--accent);
+    /* same pale mint as the table header row, with dark mint-green text */
+    background: var(--header-bg);
     color: var(--accent-fg);
-    border-color: var(--accent);
+    border-color: var(--header-bg);
   }
-  button.primary:hover { opacity: .88; background: var(--accent); }
+  button.primary:hover { background: var(--header-bg-top); border-color: var(--header-bg-top); }
 
   .card {
     border: 1px solid var(--border);
@@ -385,7 +399,7 @@
     letter-spacing: 0.01em;
     text-transform: uppercase;
     padding: 12px 16px;
-    background: var(--surface);
+    background: var(--header-bg);
     border-bottom: 1px solid var(--border);
     white-space: nowrap;
   }
@@ -458,7 +472,9 @@
     letter-spacing: 0.03em;
     padding: 8px 16px 6px;
     border-bottom: none;
-    background: var(--surface);
+    /* the group row (MODULES/REPORTS/BILLS) is a slightly greyer/darker mint
+       than the detail row below it, for a subtle two-tone header */
+    background: var(--header-bg-top);
   }
   thead tr.groups th.grp {
     border-left: 1px solid var(--border);
@@ -638,7 +654,7 @@
                autocomplete="off" spellcheck="false">
       </label>
       <div class="spacer"></div>
-      <button id="refresh">Refresh</button>
+      <button id="refresh" class="primary">Refresh</button>
     </div>
 
     <div class="controls" id="controls" hidden>
