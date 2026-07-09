@@ -30,12 +30,128 @@ async function resolveApiBase() {
   return "";
 }
 
+// ---- auth -----------------------------------------------------------------
+// The backend guards its data routes with a single shared password over HTTP
+// Basic Auth. We prompt for it, hold it in sessionStorage (so it dies with the
+// tab rather than lingering on disk like localStorage would), and attach it to
+// every request. The username half of Basic is meaningless here — the backend
+// ignores it and compares only the password.
+const AUTH_KEY = "tracker_password";
+const AUTH_USER = "tracker";
+
+function storedPassword() {
+  const saved = sessionStorage.getItem(AUTH_KEY) || "";
+  // Defend against a value left by an older version of this code.
+  if (saved && !canEncode(saved)) {
+    forgetPassword();
+    return "";
+  }
+  return saved;
+}
+
+// Ask for the password, remember it, and hand it back. Resolves to "" if the
+// user dismisses the dialog. Rejects anything Basic Auth can't encode rather
+// than storing it, which would wedge every later reload on the same bad value.
+async function askForPassword(message) {
+  let prompt = message || "Password:";
+  let isError = false;
+
+  for (;;) {
+    const entered = await showPasswordDialog(prompt, isError);
+    if (!entered) return "";
+    if (canEncode(entered)) {
+      sessionStorage.setItem(AUTH_KEY, entered);
+      return entered;
+    }
+    prompt = "The password can't contain emoji or non-Latin letters. Try again:";
+    isError = true;
+  }
+}
+
+// Renders the in-page modal and resolves with what the user typed, or "" if
+// they cancelled (button or Escape). The overlay backdrop-blurs the live page.
+function showPasswordDialog(message, isError) {
+  const overlay = document.getElementById("pw-overlay");
+  const form = document.getElementById("pw-form");
+  const input = document.getElementById("pw-input");
+  const msg = document.getElementById("pw-msg");
+  const cancel = document.getElementById("pw-cancel");
+
+  msg.textContent = message;
+  msg.classList.toggle("is-error", !!isError);
+  input.value = "";
+  overlay.hidden = false;
+  input.focus();
+
+  return new Promise((resolve) => {
+    // One resolve, one teardown — whichever path fires first wins.
+    function finish(value) {
+      form.removeEventListener("submit", onSubmit);
+      cancel.removeEventListener("click", onCancel);
+      document.removeEventListener("keydown", onKeydown);
+      overlay.hidden = true;
+      resolve(value);
+    }
+    function onSubmit(e) { e.preventDefault(); finish(input.value); }
+    function onCancel() { finish(""); }
+    function onKeydown(e) { if (e.key === "Escape") finish(""); }
+
+    form.addEventListener("submit", onSubmit);
+    cancel.addEventListener("click", onCancel);
+    document.addEventListener("keydown", onKeydown);
+  });
+}
+
+// btoa only handles Latin-1, and Basic Auth has no agreed encoding for wider
+// characters — so a password containing them could never succeed.
+function canEncode(password) {
+  try {
+    btoa(AUTH_USER + ":" + password);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function forgetPassword() {
+  sessionStorage.removeItem(AUTH_KEY);
+}
+
+// Safe to encode directly: every password reaching here passed canEncode().
+function authHeader(password) {
+  return "Basic " + btoa(AUTH_USER + ":" + password);
+}
+
 // ---- api ------------------------------------------------------------------
-// No credentials — the backend no longer requires auth. Plain fetch calls.
+// Every request carries the shared password. A 401 means it was wrong (or the
+// backend rotated it), so we drop the bad one, prompt again, and retry exactly
+// once — a typo shouldn't leave the page permanently wedged, but we also must
+// not loop forever against a backend that will never accept us.
 async function api(path, opts = {}) {
-  const res = await fetch(API_BASE + path, opts);
+  let password = storedPassword();
+  if (!password) password = await askForPassword("Enter the tracker password:");
+  if (!password) throw new Error("A password is required to load this page.");
+
+  let res = await request(path, opts, password);
+
+  if (res.status === 401) {
+    forgetPassword();
+    password = await askForPassword("That password was not accepted. Try again:");
+    if (!password) throw new Error("A password is required to load this page.");
+    res = await request(path, opts, password);
+    if (res.status === 401) {
+      forgetPassword();
+      throw new Error("That password was not accepted.");
+    }
+  }
+
   if (!res.ok) throw new Error("Request failed (" + res.status + ").");
   return res;
+}
+
+function request(path, opts, password) {
+  const headers = { ...(opts.headers || {}), Authorization: authHeader(password) };
+  return fetch(API_BASE + path, { ...opts, headers });
 }
 
 // ---- column registry ------------------------------------------------------

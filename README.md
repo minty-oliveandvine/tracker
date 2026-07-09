@@ -5,10 +5,11 @@ Static frontend for the Client Tracker. This is **frontend only** —
 the Minty backend API (`tracker_app.py`) over HTTP.
 
 - **Backend / API** lives in the Minty repo (`tools/client_tracker/tracker_app.py`).
-  It owns the database connection, the derived fields, the shared-password gate,
-  and the storage of the one editable field (`ov_published_until`).
-- **This repo** is just the table UI. It `fetch()`es `/api/rows` from the backend
-  and sends the shared password as HTTP Basic Auth on every request.
+  It owns the database connection, the derived fields, and the shared-password
+  gate.
+- **This repo** is just the table UI, and it is read-only: it `fetch()`es
+  `GET /api/tracker` from the backend and sends the shared password as HTTP
+  Basic Auth on every request.
 
 ## Deploying to Vercel
 
@@ -36,9 +37,24 @@ Environment Variable:
   and it is remembered in the browser's localStorage (takes priority over the
   env var).
 
-The shared password is entered by the user in the browser (prompt on first load)
-and kept in `sessionStorage` for the session — never stored in the repo or in
-Vercel.
+### Password
+
+Access is gated by a **single shared password**, enforced by the backend. The
+frontend prompts for it on first load, keeps it in `sessionStorage` (so it is
+gone when the tab closes), and sends it as HTTP Basic Auth on every request. It
+is never stored in this repo or in Vercel.
+
+The password itself lives only in the **backend's** environment, as
+`TRACKER_PASSWORD` on Render. To rotate it, change that variable and redeploy;
+open tabs get a `401` on their next request and re-prompt.
+
+The Basic Auth username is a fixed placeholder (`tracker`) that the backend
+ignores — only the password is checked.
+
+> **This is a lock, not an audit trail.** Because everyone shares one password,
+> the logs can show that *someone* authorized loaded the data, never *who*. If
+> that distinction ever matters for this client data, this design needs to
+> change to per-user accounts.
 
 ### Backend must allow this origin (CORS)
 
@@ -49,8 +65,16 @@ allow this Vercel origin. In the Minty backend's environment, set:
 TRACKER_ALLOWED_ORIGINS=https://your-frontend.vercel.app
 ```
 
-(comma-separate multiple origins, or use `*` to allow any). Without this, the
-browser will block the API calls.
+(comma-separate multiple origins). Without this, the browser will block the API
+calls.
+
+Two constraints come from sending a password on every request:
+
+- The allowed origin **must be the exact URL** — `*` is not valid once
+  credentials are involved, and the browser will reject the response.
+- The backend must allow the `Authorization` request header, and must **not**
+  require auth on the `OPTIONS` preflight (browsers send it without
+  credentials, so gating it means the real request never fires).
 
 ## Making this a standalone repo
 

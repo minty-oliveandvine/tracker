@@ -632,6 +632,105 @@
     100% { background-position: -200% 0; }
   }
 
+  /* password modal — the backdrop blurs the live page behind it */
+  #pw-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: color-mix(in srgb, var(--bg) 55%, transparent);
+    backdrop-filter: blur(14px) saturate(120%);
+    -webkit-backdrop-filter: blur(14px) saturate(120%);
+    animation: pw-fade .18s ease-out;
+  }
+  #pw-overlay[hidden] { display: none; }
+  @keyframes pw-fade { from { opacity: 0; } to { opacity: 1; } }
+
+  .pw-dialog {
+    width: 100%;
+    max-width: 380px;
+    background: var(--bg);
+    border: 1px solid var(--border-strong);
+    border-radius: 14px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.12), 0 2px 8px rgba(0,0,0,.06);
+    padding: 22px;
+    animation: pw-rise .18s ease-out;
+  }
+  @keyframes pw-rise {
+    from { opacity: 0; transform: translateY(6px) scale(.98); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  .pw-title {
+    margin: 0 0 4px;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--fg);
+  }
+  .pw-msg {
+    margin: 0 0 16px;
+    font-size: 13px;
+    color: var(--fg-muted);
+  }
+  .pw-msg.is-error { color: var(--danger-fg); }
+
+  #pw-input {
+    width: 100%;
+    font: inherit;
+    font-size: 14px;
+    color: var(--fg);
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    padding: 10px 12px;
+    outline: none;
+    transition: border-color .12s, box-shadow .12s;
+  }
+  #pw-input:focus {
+    border-color: var(--green);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 22%, transparent);
+  }
+
+  .pw-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 18px;
+  }
+  .pw-actions button {
+    font: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 9px 18px;
+    border-radius: 999px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background .12s, border-color .12s;
+  }
+  .pw-cancel {
+    background: var(--accent-soft);
+    color: var(--accent-fg);
+    border-color: var(--border);
+  }
+  .pw-cancel:hover { background: var(--surface-hover); }
+  .pw-ok {
+    background: var(--mint-deep);
+    color: #ffffff;
+  }
+  .pw-ok:hover { background: color-mix(in srgb, var(--mint-deep) 85%, black); }
+  .pw-actions button:focus-visible {
+    outline: 2px solid var(--green);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #pw-overlay, .pw-dialog { animation: none; }
+  }
+
   @media (max-width: 640px) {
     body { padding: 24px 14px 60px; }
     thead th, tbody td { padding: 10px 12px; }
@@ -766,6 +865,19 @@
       </div>
       <div id="empty" hidden></div>
     </div>
+  </div>
+
+  <div id="pw-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="pw-title">
+    <form class="pw-dialog" id="pw-form">
+      <h2 class="pw-title" id="pw-title">Client Tracker</h2>
+      <p class="pw-msg" id="pw-msg">Enter the tracker password:</p>
+      <input id="pw-input" type="password" autocomplete="current-password"
+             spellcheck="false" aria-labelledby="pw-msg">
+      <div class="pw-actions">
+        <button type="button" class="pw-cancel" id="pw-cancel">Cancel</button>
+        <button type="submit" class="pw-ok" id="pw-ok">OK</button>
+      </div>
+    </form>
   </div>
 
   <script src="/app.js"></script>
