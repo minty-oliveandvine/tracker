@@ -17,19 +17,21 @@
     --border-strong: #e0e0e0;
     --surface: #fafafa;
     --surface-hover: #f5f5f5;
-    /* light mint accent — sampled from the logo's clipboard paper */
-    --mint: #B8E0CE;             /* the pale mint of the paper */
-    --mint-deep: #4A9B7F;        /* the logo's darker mint (text/checkmarks) */
-    --accent: #B8E0CE;           /* soft mint for chips / selected states */
-    --accent-fg: #1f3d33;        /* dark mint-green text on mint fills — readable */
-    --accent-hover: #a6d6c0;
-    --accent-soft: #eef8f3;      /* faintest mint wash for hovers */
-    --header-bg: #dcefe7;        /* pastel mint for the detail header row */
-    --header-bg-top: #d3e8df;    /* slightly greyer/darker mint for the group row */
-    --green: #4A9B7F;            /* focus rings / links — the deeper mint */
-    --green-bg: #eef8f3;
-    --success: #4A9B7F;          /* Active badges */
-    --success-bg: #eaf6f0;
+    /* cyan accent. Two tiers, because one value can't do both jobs: the mid-tone
+       is for FILLS (chips, headers), the deep one for TEXT. #55d3da on white is
+       only ~2:1 contrast, so links and badges use --mint-deep instead. */
+    --mint: #55d3da;             /* the accent proper — fills */
+    --mint-deep: #1a7f85;        /* same hue, darkened to 4.9:1 for text */
+    --accent: #55d3da;           /* chips / selected states */
+    --accent-fg: #04191a;        /* near-black cyan text on accent fills */
+    --accent-hover: #3cc3cb;
+    --accent-soft: #eafafb;      /* faintest cyan wash for hovers */
+    --header-bg: #ccf0f2;        /* pale cyan for the detail header row */
+    --header-bg-top: #bde9ec;    /* slightly deeper cyan for the group row */
+    --green: #1a7f85;            /* focus rings / links — the deep cyan */
+    --green-bg: #eafafb;
+    --success: #1a7f85;          /* Active badges */
+    --success-bg: #e4f7f8;
     --danger: #c11574;
     --danger-fg: #b91c1c;
     --shadow: 0 1px 2px rgba(0,0,0,.04), 0 1px 3px rgba(0,0,0,.04);
@@ -49,17 +51,18 @@
       --border-strong: #2e2e2e;
       --surface: #141414;
       --surface-hover: #1a1a1a;
-      /* teal accent — brighter for dark mode legibility */
-      --accent: #4CA392;
-      --accent-fg: #05130f;
-      --accent-hover: #5cb3a2;
-      --accent-soft: #10251f;
-      --header-bg: #16302a;        /* pastel mint header, dark-mode variant */
-      --header-bg-top: #1d3b34;    /* slightly lighter group row in dark mode */
-      --green: #4CA392;
-      --green-bg: #10251f;
-      --success: #5cc4ac;
-      --success-bg: #10251f;
+      /* cyan accent — on dark the mid-tone is already high-contrast (9.6:1),
+         so unlike light mode it can serve as both fill and text. */
+      --accent: #55d3da;
+      --accent-fg: #04191a;
+      --accent-hover: #6fdde3;
+      --accent-soft: #0d2426;
+      --header-bg: #123033;        /* pale cyan header, dark-mode variant */
+      --header-bg-top: #173c40;    /* slightly lighter group row in dark mode */
+      --green: #55d3da;
+      --green-bg: #0d2426;
+      --success: #6fdde3;
+      --success-bg: #0d2426;
       --danger: #ff6ab8;
       --danger-fg: #f87171;
       --shadow: 0 1px 2px rgba(0,0,0,.4);
@@ -118,8 +121,9 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    /* muted teal-grey */
-    color: #6E9088;
+    /* muted cyan-grey — desaturated --mint, so the heading sits back rather
+       than competing with the accent it shares a hue with */
+    color: #5f8f93;
   }
   .logo {
     width: 60px; height: 60px;
