@@ -81,7 +81,15 @@
   .table-scroll { overflow-x: auto; }
   /* Mirrored scrollbar above the table. Always shows its bar rather than
      autohiding, since it has no content of its own to hint that it scrolls. */
-  .top-scroll { overflow-x: scroll; overflow-y: hidden; }
+  /* The element needs its own height: ::-webkit-scrollbar sizes the bar INSIDE
+     it, so without this the div collapses to the 1px spacer and the bar has no
+     room to render. 12px fits the 10px bar plus its track. */
+  .top-scroll {
+    overflow-x: scroll;
+    overflow-y: hidden;
+    height: 12px;
+    margin-bottom: 4px;
+  }
   #top-scroll-spacer { height: 1px; }
   /* WebKit hides overlay scrollbars until scroll; force this one visible. */
   .top-scroll::-webkit-scrollbar { -webkit-appearance: none; height: 10px; }

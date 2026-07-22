@@ -458,18 +458,20 @@ function relativeTime(d) {
 // arrow keys scroll the container directly), so it's purely additive.
 
 // Guard against the echo: setting scrollLeft on one element fires its scroll
-// event, which would set it back on the other. Without this the two fight and
-// the bar stutters or drifts under fast dragging.
-let syncingScroll = false;
-
+// event, which would set it back on the other and start a feedback loop.
+//
+// A single shared "syncing" flag is NOT enough — it can't distinguish the echo
+// it caused from a genuine new scroll on the other element, so dragging one bar
+// right after the other leaves the two out of step. Instead we record which
+// element is currently being driven and ignore only that one's echo.
+// The positions-already-agree check below is what actually breaks the loop:
+// an echo always arrives with the two sides equal, so it returns early and
+// nothing bounces back. That needs no flag and cannot latch — if the browser
+// coalesces or drops the echo event, the next real scroll still syncs.
 function linkScroll(from, to) {
   from.addEventListener("scroll", () => {
-    if (syncingScroll) return;
-    syncingScroll = true;
+    if (from.scrollLeft === to.scrollLeft) return;
     to.scrollLeft = from.scrollLeft;
-    // Clear on the next frame, not synchronously — the scroll event we just
-    // triggered on `to` hasn't been dispatched yet at this point.
-    requestAnimationFrame(() => { syncingScroll = false; });
   });
 }
 
