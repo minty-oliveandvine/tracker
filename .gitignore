@@ -2,3 +2,8 @@
 .DS_Store
 node_modules
 *.log
+
+# Secrets — TRACKER_PASSWORD and friends never belong in the repo.
+.env
+.env.*
+!.env.example

@@ -366,6 +366,8 @@ function render() {
     tbody.appendChild(tr);
   }
 
+  syncTopScrollWidth(); // row count changed -> table width may have too
+
   const total = allRows.length;
   const pcOn = allRows.filter(r => r.pettycash).length;
   const billOn = allRows.filter(r => r.billing).length;
@@ -444,6 +446,62 @@ function relativeTime(d) {
   if (hr >= 1) return `${hr}h ago`;
   if (min >= 1) return `${min}m ago`;
   return "just now";
+}
+
+// ---- mirrored top scrollbar -----------------------------------------------
+// The table's real scrollbar sits at its bottom edge, which on a long table is
+// below the fold — a mouse user has to scroll down to find it before they can
+// pan right. This mirrors it above the table: a dummy scroller whose inner
+// spacer is kept as wide as the table, with scrollLeft synced both ways.
+//
+// Trackpad and keyboard users never needed this (two-finger swipe and the
+// arrow keys scroll the container directly), so it's purely additive.
+
+// Guard against the echo: setting scrollLeft on one element fires its scroll
+// event, which would set it back on the other. Without this the two fight and
+// the bar stutters or drifts under fast dragging.
+let syncingScroll = false;
+
+function linkScroll(from, to) {
+  from.addEventListener("scroll", () => {
+    if (syncingScroll) return;
+    syncingScroll = true;
+    to.scrollLeft = from.scrollLeft;
+    // Clear on the next frame, not synchronously — the scroll event we just
+    // triggered on `to` hasn't been dispatched yet at this point.
+    requestAnimationFrame(() => { syncingScroll = false; });
+  });
+}
+
+// Match the spacer to the table's real width, and hide the whole strip when
+// there's nothing to scroll (a scrollbar over a table that fits reads as broken).
+function syncTopScrollWidth() {
+  const top = el("top-scroll");
+  const spacer = el("top-scroll-spacer");
+  const scroller = document.querySelector(".table-scroll");
+  const table = scroller && scroller.querySelector("table");
+  if (!top || !spacer || !scroller || !table) return;
+
+  spacer.style.width = table.scrollWidth + "px";
+  top.hidden = table.scrollWidth <= scroller.clientWidth;
+}
+
+function initTopScroll() {
+  const top = el("top-scroll");
+  const scroller = document.querySelector(".table-scroll");
+  if (!top || !scroller) return;
+
+  linkScroll(top, scroller);
+  linkScroll(scroller, top);
+
+  // The table reflows on viewport resize (and on column-visibility changes,
+  // which resize the table without a re-render). ResizeObserver catches both;
+  // the resize listener covers browsers where the observer misses a reflow.
+  if (typeof ResizeObserver !== "undefined") {
+    new ResizeObserver(syncTopScrollWidth).observe(scroller);
+  }
+  window.addEventListener("resize", syncTopScrollWidth);
+  syncTopScrollWidth();
 }
 
 // ---- helpers --------------------------------------------------------------
@@ -830,4 +888,5 @@ document.querySelectorAll(".col-title").forEach((btn) => {
 buildControlOptions();
 buildSortButtons();
 syncRfPlaceholder();
+initTopScroll();
 load();

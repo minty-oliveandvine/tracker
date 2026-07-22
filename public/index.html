@@ -79,6 +79,21 @@
   }
   .wrap { max-width: 1180px; margin: 0 auto; }
   .table-scroll { overflow-x: auto; }
+  /* Mirrored scrollbar above the table. Always shows its bar rather than
+     autohiding, since it has no content of its own to hint that it scrolls. */
+  .top-scroll { overflow-x: scroll; overflow-y: hidden; }
+  #top-scroll-spacer { height: 1px; }
+  /* WebKit hides overlay scrollbars until scroll; force this one visible. */
+  .top-scroll::-webkit-scrollbar { -webkit-appearance: none; height: 10px; }
+  .top-scroll::-webkit-scrollbar-track { background: var(--surface); border-radius: 5px; }
+  .top-scroll::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 5px;
+    border: 2px solid var(--surface);
+  }
+  .top-scroll::-webkit-scrollbar-thumb:hover { background: var(--fg-muted); }
+  /* Firefox */
+  .top-scroll { scrollbar-width: thin; scrollbar-color: var(--border) var(--surface); }
 
   header {
     display: flex;
@@ -799,6 +814,14 @@
         <div class="skel-row"><div class="skel" style="width:18%"></div><div class="skel" style="flex:1"></div><div class="skel" style="flex:1"></div><div class="skel" style="flex:1"></div></div>
         <div class="skel-row"><div class="skel" style="width:22%"></div><div class="skel" style="flex:1"></div><div class="skel" style="flex:1"></div><div class="skel" style="flex:1"></div></div>
         <div class="skel-row"><div class="skel" style="width:16%"></div><div class="skel" style="flex:1"></div><div class="skel" style="flex:1"></div><div class="skel" style="flex:1"></div></div>
+      </div>
+      <!-- Mirrored horizontal scrollbar. The real one sits at the bottom of a
+           tall table, off-screen until you scroll down, so a mouse user has no
+           reachable way to pan right. This is a dummy scroller synced both ways
+           with .table-scroll; #top-scroll-spacer is resized to match the table.
+           Hidden when the table fits, so no bare scrollbar floats over nothing. -->
+      <div id="top-scroll" class="top-scroll" aria-hidden="true" hidden>
+        <div id="top-scroll-spacer"></div>
       </div>
       <div class="table-scroll">
       <table>
