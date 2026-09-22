@@ -266,9 +266,8 @@ function applyFiltersAndSort() {
       // Compare on the YYYY-MM-DD prefix; rows with no date are excluded.
       const target = String(rf.value).slice(0, 10);
       rows = rows.filter(r => {
-        const raw = r[rfCol.key];
-        if (!raw) return false;
-        const d = String(raw).slice(0, 10);
+        const d = dateKey(r[rfCol.key], entityZone(r));
+        if (!d) return false;
         if (rf.op === "after")  return d > target;
         if (rf.op === "before") return d < target;
         if (rf.op === "on")     return d === target;
@@ -317,9 +316,10 @@ function compareBy(col, a, b, dir) {
     const av = Number(a[col.key] || 0), bv = Number(b[col.key] || 0);
     return flip * (av - bv);
   }
-  // date: compare YYYY-MM-DD strings; blanks always sort to the bottom.
-  const as = a[col.key] ? String(a[col.key]).slice(0, 10) : "";
-  const bs = b[col.key] ? String(b[col.key]).slice(0, 10) : "";
+  // date: compare YYYY-MM-DD keys (each entity's local day for datetimes);
+  // blanks always sort to the bottom.
+  const as = dateKey(a[col.key], entityZone(a));
+  const bs = dateKey(b[col.key], entityZone(b));
   if (!as && !bs) return 0;
   if (!as) return 1;   // a is blank -> after b
   if (!bs) return -1;  // b is blank -> after a
@@ -347,20 +347,21 @@ function render() {
   }
 
   for (const r of rows) {
+    const tz = entityZone(r);
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td class="name">${escapeHtml(clientName(r))}</td>
       <td class="flag grp-start">${checkmark(r.pettycash)}</td>
       <td class="flag">${checkmark(r.billing)}</td>
       <td class="derived grp-start">${dateCell(r.pc_latest_submitted)}</td>
-      <td class="derived">${datetimeCell(r.pc_latest_submitted_date)}</td>
+      <td class="derived">${datetimeCell(r.pc_latest_submitted_date, tz)}</td>
       <td class="derived">${dateCell(r.pc_latest_published)}</td>
       <td class="num grp-start">${numCell(r.num_paid)}</td>
       <td class="num">${numCell(r.num_partialpaid)}</td>
       <td class="num">${numCell(r.num_unpaid)}</td>
       <td class="num">${numCell(r.num_published)}</td>
-      <td class="derived">${datetimeCell(r.latest_bill_published)}</td>
-      <td class="derived">${datetimeCell(r.latest_bill_update)}</td>`;
+      <td class="derived">${datetimeCell(r.latest_bill_published, tz)}</td>
+      <td class="derived">${datetimeCell(r.latest_bill_update, tz)}</td>`;
     // Use entity_id as a stable row key (not displayed).
     if (r.entity_id != null) tr.dataset.entityId = r.entity_id;
     tbody.appendChild(tr);
@@ -400,9 +401,166 @@ function numCell(n) {
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
                 "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+// ---- time zone ------------------------------------------------------------
+// Datetime columns are shown in each entity's own local time, converted here
+// in the browser. The backend passes the DB's ISO strings through untouched
+// (UTC), plus the entity's country_code and timezone columns.
+//
+// Zone resolution per row (entityZone):
+//   1. row.timezone, if it is a valid IANA name -- an explicit per-entity
+//      override (entities.timezone; nothing else writes it today).
+//   2. COUNTRY_TZ[row.country_code] -- one representative zone per country.
+//      Multi-zone countries (US, CA, AU, BR, RU, ...) get their capital /
+//      most-populous zone; set entities.timezone for an exact one.
+//   3. DEFAULT_TZ.
+const DEFAULT_TZ = "Asia/Hong_Kong";
+
+// ISO 3166-1 alpha-2 -> IANA zone. Matches the country_info seed list.
+const COUNTRY_TZ = {
+  AD: "Europe/Andorra", AE: "Asia/Dubai", AF: "Asia/Kabul", AG: "America/Antigua",
+  AI: "America/Anguilla", AL: "Europe/Tirane", AM: "Asia/Yerevan", AO: "Africa/Luanda",
+  AQ: "Antarctica/McMurdo", AR: "America/Argentina/Buenos_Aires", AS: "Pacific/Pago_Pago",
+  AT: "Europe/Vienna", AU: "Australia/Sydney", AW: "America/Aruba", AX: "Europe/Mariehamn",
+  AZ: "Asia/Baku", BA: "Europe/Sarajevo", BB: "America/Barbados", BD: "Asia/Dhaka",
+  BE: "Europe/Brussels", BF: "Africa/Ouagadougou", BG: "Europe/Sofia", BH: "Asia/Bahrain",
+  BI: "Africa/Bujumbura", BJ: "Africa/Porto-Novo", BL: "America/St_Barthelemy",
+  BM: "Atlantic/Bermuda", BN: "Asia/Brunei", BO: "America/La_Paz", BQ: "America/Kralendijk",
+  BR: "America/Sao_Paulo", BS: "America/Nassau", BT: "Asia/Thimphu", BV: "Europe/Oslo",
+  BW: "Africa/Gaborone", BY: "Europe/Minsk", BZ: "America/Belize", CA: "America/Toronto",
+  CC: "Indian/Cocos", CD: "Africa/Kinshasa", CF: "Africa/Bangui", CG: "Africa/Brazzaville",
+  CH: "Europe/Zurich", CI: "Africa/Abidjan", CK: "Pacific/Rarotonga", CL: "America/Santiago",
+  CM: "Africa/Douala", CN: "Asia/Shanghai", CO: "America/Bogota", CR: "America/Costa_Rica",
+  CU: "America/Havana", CV: "Atlantic/Cape_Verde", CW: "America/Curacao",
+  CX: "Indian/Christmas", CY: "Asia/Nicosia", CZ: "Europe/Prague", DE: "Europe/Berlin",
+  DJ: "Africa/Djibouti", DK: "Europe/Copenhagen", DM: "America/Dominica",
+  DO: "America/Santo_Domingo", DZ: "Africa/Algiers", EC: "America/Guayaquil",
+  EE: "Europe/Tallinn", EG: "Africa/Cairo", EH: "Africa/El_Aaiun", ER: "Africa/Asmara",
+  ES: "Europe/Madrid", ET: "Africa/Addis_Ababa", FI: "Europe/Helsinki", FJ: "Pacific/Fiji",
+  FK: "Atlantic/Stanley", FM: "Pacific/Pohnpei", FO: "Atlantic/Faroe", FR: "Europe/Paris",
+  GA: "Africa/Libreville", GB: "Europe/London", GD: "America/Grenada", GE: "Asia/Tbilisi",
+  GF: "America/Cayenne", GG: "Europe/Guernsey", GH: "Africa/Accra", GI: "Europe/Gibraltar",
+  GL: "America/Nuuk", GM: "Africa/Banjul", GN: "Africa/Conakry", GP: "America/Guadeloupe",
+  GQ: "Africa/Malabo", GR: "Europe/Athens", GS: "Atlantic/South_Georgia",
+  GT: "America/Guatemala", GU: "Pacific/Guam", GW: "Africa/Bissau", GY: "America/Guyana",
+  HK: "Asia/Hong_Kong", HM: "Indian/Kerguelen", HN: "America/Tegucigalpa",
+  HR: "Europe/Zagreb", HT: "America/Port-au-Prince", HU: "Europe/Budapest",
+  ID: "Asia/Jakarta", IE: "Europe/Dublin", IL: "Asia/Jerusalem", IM: "Europe/Isle_of_Man",
+  IN: "Asia/Kolkata", IO: "Indian/Chagos", IQ: "Asia/Baghdad", IR: "Asia/Tehran",
+  IS: "Atlantic/Reykjavik", IT: "Europe/Rome", JE: "Europe/Jersey", JM: "America/Jamaica",
+  JO: "Asia/Amman", JP: "Asia/Tokyo", KE: "Africa/Nairobi", KG: "Asia/Bishkek",
+  KH: "Asia/Phnom_Penh", KI: "Pacific/Tarawa", KM: "Indian/Comoro", KN: "America/St_Kitts",
+  KP: "Asia/Pyongyang", KR: "Asia/Seoul", KW: "Asia/Kuwait", KY: "America/Cayman",
+  KZ: "Asia/Almaty", LA: "Asia/Vientiane", LB: "Asia/Beirut", LC: "America/St_Lucia",
+  LI: "Europe/Vaduz", LK: "Asia/Colombo", LR: "Africa/Monrovia", LS: "Africa/Maseru",
+  LT: "Europe/Vilnius", LU: "Europe/Luxembourg", LV: "Europe/Riga", LY: "Africa/Tripoli",
+  MA: "Africa/Casablanca", MC: "Europe/Monaco", MD: "Europe/Chisinau", ME: "Europe/Podgorica",
+  MF: "America/Marigot", MG: "Indian/Antananarivo", MH: "Pacific/Majuro", MK: "Europe/Skopje",
+  ML: "Africa/Bamako", MM: "Asia/Yangon", MN: "Asia/Ulaanbaatar", MO: "Asia/Macau",
+  MP: "Pacific/Saipan", MQ: "America/Martinique", MR: "Africa/Nouakchott",
+  MS: "America/Montserrat", MT: "Europe/Malta", MU: "Indian/Mauritius", MV: "Indian/Maldives",
+  MW: "Africa/Blantyre", MX: "America/Mexico_City", MY: "Asia/Kuala_Lumpur",
+  MZ: "Africa/Maputo", NA: "Africa/Windhoek", NC: "Pacific/Noumea", NE: "Africa/Niamey",
+  NF: "Pacific/Norfolk", NG: "Africa/Lagos", NI: "America/Managua", NL: "Europe/Amsterdam",
+  NO: "Europe/Oslo", NP: "Asia/Kathmandu", NR: "Pacific/Nauru", NU: "Pacific/Niue",
+  NZ: "Pacific/Auckland", OM: "Asia/Muscat", PA: "America/Panama", PE: "America/Lima",
+  PF: "Pacific/Tahiti", PG: "Pacific/Port_Moresby", PH: "Asia/Manila", PK: "Asia/Karachi",
+  PL: "Europe/Warsaw", PM: "America/Miquelon", PN: "Pacific/Pitcairn",
+  PR: "America/Puerto_Rico", PS: "Asia/Gaza", PT: "Europe/Lisbon", PW: "Pacific/Palau",
+  PY: "America/Asuncion", QA: "Asia/Qatar", RE: "Indian/Reunion", RO: "Europe/Bucharest",
+  RS: "Europe/Belgrade", RU: "Europe/Moscow", RW: "Africa/Kigali", SA: "Asia/Riyadh",
+  SB: "Pacific/Guadalcanal", SC: "Indian/Mahe", SD: "Africa/Khartoum", SE: "Europe/Stockholm",
+  SG: "Asia/Singapore", SH: "Atlantic/St_Helena", SI: "Europe/Ljubljana",
+  SJ: "Arctic/Longyearbyen", SK: "Europe/Bratislava", SL: "Africa/Freetown",
+  SM: "Europe/San_Marino", SN: "Africa/Dakar", SO: "Africa/Mogadishu",
+  SR: "America/Paramaribo", SS: "Africa/Juba", ST: "Africa/Sao_Tome", SV: "America/El_Salvador",
+  SX: "America/Lower_Princes", SY: "Asia/Damascus", SZ: "Africa/Mbabane",
+  TC: "America/Grand_Turk", TD: "Africa/Ndjamena", TF: "Indian/Kerguelen", TG: "Africa/Lome",
+  TH: "Asia/Bangkok", TJ: "Asia/Dushanbe", TK: "Pacific/Fakaofo", TL: "Asia/Dili",
+  TM: "Asia/Ashgabat", TN: "Africa/Tunis", TO: "Pacific/Tongatapu", TR: "Europe/Istanbul",
+  TT: "America/Port_of_Spain", TV: "Pacific/Funafuti", TW: "Asia/Taipei",
+  TZ: "Africa/Dar_es_Salaam", UA: "Europe/Kyiv", UG: "Africa/Kampala", UM: "Pacific/Wake",
+  US: "America/New_York", UY: "America/Montevideo", UZ: "Asia/Tashkent",
+  VA: "Europe/Vatican", VC: "America/St_Vincent", VE: "America/Caracas",
+  VG: "America/Tortola", VI: "America/St_Thomas", VN: "Asia/Ho_Chi_Minh", VU: "Pacific/Efate",
+  WF: "Pacific/Wallis", WS: "Pacific/Apia", YE: "Asia/Aden", YT: "Indian/Mayotte",
+  ZA: "Africa/Johannesburg", ZM: "Africa/Lusaka", ZW: "Africa/Harare",
+};
+
+// One Intl.DateTimeFormat per zone, built lazily. An unknown/invalid zone
+// name makes the constructor throw a RangeError; fall back to DEFAULT_TZ so a
+// bad entities.timezone value never blanks the table.
+const FMT_CACHE = new Map();
+function fmtFor(tz) {
+  let fmt = FMT_CACHE.get(tz);
+  if (fmt) return fmt;
+  const opts = {
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+  };
+  try {
+    fmt = new Intl.DateTimeFormat("en-GB", { ...opts, timeZone: tz });
+  } catch (e) {
+    fmt = new Intl.DateTimeFormat("en-GB", { ...opts, timeZone: DEFAULT_TZ });
+  }
+  FMT_CACHE.set(tz, fmt);
+  return fmt;
+}
+
+// Whether `tz` is a zone name Intl accepts. Cached: the probe constructs a
+// formatter, and this runs once per row per render.
+const VALID_TZ = new Map();
+function isValidZone(tz) {
+  if (!tz) return false;
+  if (VALID_TZ.has(tz)) return VALID_TZ.get(tz);
+  let ok = false;
+  try { new Intl.DateTimeFormat(undefined, { timeZone: tz }); ok = true; } catch (e) {}
+  VALID_TZ.set(tz, ok);
+  return ok;
+}
+
+// The IANA zone to display a row's datetimes in (see resolution order above).
+function entityZone(row) {
+  const explicit = String(row?.timezone ?? "").trim();
+  if (isValidZone(explicit)) return explicit;
+  const cc = String(row?.country_code ?? "").trim().toUpperCase();
+  return COUNTRY_TZ[cc] || DEFAULT_TZ;
+}
+
+// Parse a backend ISO datetime string into a Date, or null if it isn't one
+// (date-only "YYYY-MM-DD", blank, garbage). A datetime that carries no
+// offset/Z is treated as UTC — never as browser-local, which is what a bare
+// `new Date("2026-01-01T07:14:00")` would do.
+function parseInstant(v) {
+  // Python's isoformat() emits microseconds (.123456); Date.parse only
+  // reliably accepts up to millisecond precision, so trim the fraction.
+  const s = String(v ?? "").replace(/(\.\d{3})\d+/, "$1");
+  if (!/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(s)) return null;
+  const hasOffset = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(s);
+  const d = new Date(hasOffset ? s : s + "Z");
+  return isNaN(d.getTime()) ? null : d;
+}
+
+// Return "YYYY-MM-DDTHH:MM" in zone `tz` for a datetime string. Date-only or
+// unparseable input is returned unchanged, so callers can slice the same
+// positions regardless of which they were given.
+function toDisplayIso(v, tz = DEFAULT_TZ) {
+  const d = parseInstant(v);
+  if (!d) return String(v ?? "");
+  const p = {};
+  for (const { type, value } of fmtFor(tz).formatToParts(d)) p[type] = value;
+  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
+}
+
+// The YYYY-MM-DD used for sorting and range-filtering a date/datetime column.
+// Goes through toDisplayIso so a datetime's day boundary matches what the
+// cell shows (a 20:00 UTC timestamp is the *next* day in Hong Kong).
+function dateKey(v, tz = DEFAULT_TZ) {
+  return v ? toDisplayIso(v, tz).slice(0, 10) : "";
+}
+
 // Format a "YYYY-MM-DD..." string as "DD MMM YYYY" (e.g. "01 Jan 2026),
-// parsing the parts straight from the string (no Date/UTC conversion). Returns
-// the raw input unchanged if it doesn't look like an ISO date.
+// parsing the parts straight from the string. Returns the raw input unchanged
+// if it doesn't look like an ISO date.
 function formatDate(v) {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(v));
   if (!m) return String(v);
@@ -417,21 +575,38 @@ function dateCell(v) {
   return escapeHtml(formatDate(v));
 }
 
-// Datetime field: show date + 24-hour time as "DD MMM YYYY HH:MM" — date
-// formatted via formatDate() and time sliced straight from the string (NOT via
-// Date/toISOString(), which would shift the naive backend timestamps into UTC
-// and could show the wrong day/time), with the full timestamp + relative age
-// on hover.
-function datetimeCell(v) {
+// Datetime field: show date + 24-hour time as "DD MMM YYYY HH:MM" in the
+// entity's zone `tz` (see entityZone / toDisplayIso). The cell carries no
+// zone label; the hover tooltip names the zone alongside the full converted
+// timestamp + relative age.
+function datetimeCell(v, tz) {
   if (!v) return '<span class="none">—</span>';
-  const s = String(v);
+  const s = toDisplayIso(v, tz);
   const date = formatDate(s);
-  const time = s.slice(11, 16); // "HH:MM" from the "...THH:MM:SS" portion
+  const time = s.slice(11, 16); // "HH:MM" from the "...THH:MM" portion
   const shown = time ? `${date} ${time}` : date;
-  const d = new Date(v);
-  const rel = isNaN(d.getTime()) ? "" : relativeTime(d);
-  const full = escapeHtml(s);
-  return `<span title="${full}${rel ? " · " + rel : ""}">${escapeHtml(shown)}</span>`;
+  const d = parseInstant(v);
+  const rel = d ? relativeTime(d) : "";
+  const title = [s, zoneLabel(tz), rel].filter(Boolean).join(" · ");
+  return `<span title="${escapeHtml(title)}">${escapeHtml(shown)}</span>`;
+}
+
+// Human-readable zone name for tooltips, e.g. "Hong Kong Standard Time
+// (Asia/Hong_Kong)"; falls back to the bare IANA id if Intl can't name it.
+// Cached per zone.
+const ZONE_LABEL = new Map();
+function zoneLabel(tz) {
+  if (!tz) return "";
+  if (ZONE_LABEL.has(tz)) return ZONE_LABEL.get(tz);
+  let label = tz;
+  try {
+    const part = new Intl.DateTimeFormat("en-GB", { timeZone: tz, timeZoneName: "long" })
+      .formatToParts(new Date())
+      .find(p => p.type === "timeZoneName");
+    if (part && part.value) label = `${part.value} (${tz})`;
+  } catch (e) { /* invalid zone -> plain id */ }
+  ZONE_LABEL.set(tz, label);
+  return label;
 }
 
 function relativeTime(d) {
