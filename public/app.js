@@ -266,9 +266,8 @@ function applyFiltersAndSort() {
       // Compare on the YYYY-MM-DD prefix; rows with no date are excluded.
       const target = String(rf.value).slice(0, 10);
       rows = rows.filter(r => {
-        const raw = r[rfCol.key];
-        if (!raw) return false;
-        const d = String(raw).slice(0, 10);
+        const d = dateKey(r[rfCol.key]);
+        if (!d) return false;
         if (rf.op === "after")  return d > target;
         if (rf.op === "before") return d < target;
         if (rf.op === "on")     return d === target;
@@ -317,9 +316,10 @@ function compareBy(col, a, b, dir) {
     const av = Number(a[col.key] || 0), bv = Number(b[col.key] || 0);
     return flip * (av - bv);
   }
-  // date: compare YYYY-MM-DD strings; blanks always sort to the bottom.
-  const as = a[col.key] ? String(a[col.key]).slice(0, 10) : "";
-  const bs = b[col.key] ? String(b[col.key]).slice(0, 10) : "";
+  // date: compare YYYY-MM-DD keys (HK day for datetimes); blanks always sort
+  // to the bottom.
+  const as = dateKey(a[col.key]);
+  const bs = dateKey(b[col.key]);
   if (!as && !bs) return 0;
   if (!as) return 1;   // a is blank -> after b
   if (!bs) return -1;  // b is blank -> after a
@@ -400,9 +400,52 @@ function numCell(n) {
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
                 "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+// ---- time zone ------------------------------------------------------------
+// Datetime columns are shown in Hong Kong time, converted here in the browser.
+// The backend passes the DB's ISO strings through untouched (UTC session on
+// Supabase), so the conversion happens at display time only.
+const DISPLAY_TZ = "Asia/Hong_Kong";
+const DISPLAY_FMT = new Intl.DateTimeFormat("en-GB", {
+  timeZone: DISPLAY_TZ,
+  year: "numeric", month: "2-digit", day: "2-digit",
+  hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+});
+
+// Parse a backend ISO datetime string into a Date, or null if it isn't one
+// (date-only "YYYY-MM-DD", blank, garbage). A datetime that carries no
+// offset/Z is treated as UTC — never as browser-local, which is what a bare
+// `new Date("2026-01-01T07:14:00")` would do.
+function parseInstant(v) {
+  // Python's isoformat() emits microseconds (.123456); Date.parse only
+  // reliably accepts up to millisecond precision, so trim the fraction.
+  const s = String(v ?? "").replace(/(\.\d{3})\d+/, "$1");
+  if (!/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(s)) return null;
+  const hasOffset = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(s);
+  const d = new Date(hasOffset ? s : s + "Z");
+  return isNaN(d.getTime()) ? null : d;
+}
+
+// Return "YYYY-MM-DDTHH:MM" in DISPLAY_TZ for a datetime string. Date-only or
+// unparseable input is returned unchanged, so callers can slice the same
+// positions regardless of which they were given.
+function toDisplayIso(v) {
+  const d = parseInstant(v);
+  if (!d) return String(v ?? "");
+  const p = {};
+  for (const { type, value } of DISPLAY_FMT.formatToParts(d)) p[type] = value;
+  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
+}
+
+// The YYYY-MM-DD used for sorting and range-filtering a date/datetime column.
+// Goes through toDisplayIso so a datetime's day boundary matches what the
+// cell shows (a 20:00 UTC timestamp is the *next* day in Hong Kong).
+function dateKey(v) {
+  return v ? toDisplayIso(v).slice(0, 10) : "";
+}
+
 // Format a "YYYY-MM-DD..." string as "DD MMM YYYY" (e.g. "01 Jan 2026),
-// parsing the parts straight from the string (no Date/UTC conversion). Returns
-// the raw input unchanged if it doesn't look like an ISO date.
+// parsing the parts straight from the string. Returns the raw input unchanged
+// if it doesn't look like an ISO date.
 function formatDate(v) {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(v));
   if (!m) return String(v);
@@ -417,21 +460,21 @@ function dateCell(v) {
   return escapeHtml(formatDate(v));
 }
 
-// Datetime field: show date + 24-hour time as "DD MMM YYYY HH:MM" — date
-// formatted via formatDate() and time sliced straight from the string (NOT via
-// Date/toISOString(), which would shift the naive backend timestamps into UTC
-// and could show the wrong day/time), with the full timestamp + relative age
-// on hover.
+// Datetime field: show date + 24-hour time as "DD MMM YYYY HH:MM" in Hong
+// Kong time (see toDisplayIso). The cell carries no zone label; the hover
+// tooltip names the zone alongside the full timestamp + relative age.
+const DISPLAY_TZ_LABEL = "Hong Kong time";
+
 function datetimeCell(v) {
   if (!v) return '<span class="none">—</span>';
-  const s = String(v);
+  const s = toDisplayIso(v);
   const date = formatDate(s);
-  const time = s.slice(11, 16); // "HH:MM" from the "...THH:MM:SS" portion
+  const time = s.slice(11, 16); // "HH:MM" from the "...THH:MM" portion
   const shown = time ? `${date} ${time}` : date;
-  const d = new Date(v);
-  const rel = isNaN(d.getTime()) ? "" : relativeTime(d);
-  const full = escapeHtml(s);
-  return `<span title="${full}${rel ? " · " + rel : ""}">${escapeHtml(shown)}</span>`;
+  const d = parseInstant(v);
+  const rel = d ? relativeTime(d) : "";
+  const title = [s, DISPLAY_TZ_LABEL, rel].filter(Boolean).join(" · ");
+  return `<span title="${escapeHtml(title)}">${escapeHtml(shown)}</span>`;
 }
 
 function relativeTime(d) {
